@@ -99,8 +99,8 @@
     .folder-drop:hover .folder-drop-icon{ color:var(--accent); }
     .folder-drop:active{ transform:scale(.985); }
     .folder-drop-icon { margin-right: 8px; color: var(--accent-hover); }
-    #file-input { display: none !important; } /* 彻底隐藏原生按钮 */
-    #folder-status { font-size: 12px; color: var(--text-muted); margin-top: 8px; min-height: 16px; text-align: center; }
+    #file-input { display: none !important; } 
+    #folder-status { font-size: 12px; color: var(--text-muted); margin-top: 8px; height: 16px; }
 
     /* 模式面板 */
     .mode-section { width: 100%; border-top: 1px solid var(--border-soft); padding-top: 24px; margin-top: 20px; }
@@ -180,7 +180,6 @@
         position:absolute; top: 0; left: 0; width: 100%; height: 100%;
         object-fit: contain; 
         transition: transform .2s ease, filter .2s ease, opacity .3s ease;
-        will-change: transform; /* 【修复】强制浏览器做硬件加速准备 */
         z-index: 2; pointer-events: none;
     }
     #canvas-img.is-resting{ opacity:.15; filter:blur(2px) grayscale(60%); }
@@ -244,7 +243,8 @@
         box-shadow:0 24px 50px -14px rgba(0,0,0,.6);
         opacity:0; transform:translate(-50%,16px); transition:opacity .25s ease, transform .25s ease;
     }
-    /* 【修复】排除了触控设备，解决 iPad 笔离开后工具栏卡住不消失的 Bug */
+    
+    /* 【修复 2】排除了触控设备，解决 iPad 笔离开后工具栏不消失的 Bug */
     body:not(.touch-device) #play-screen:hover .bottom-toolbar { opacity:1; transform:translate(-50%,0); }
     #play-screen.toolbar-pinned .bottom-toolbar { opacity:1; transform:translate(-50%,0); }
     
@@ -402,7 +402,7 @@
 
     /* 图片查看缩放 (双击放大细看动态/结构) */
     #canvas-img.is-zoomed{ cursor: grab; transition: transform .15s ease-out; }
-    #canvas-img.is-zoomed.is-dragging{ transition: none !important; cursor: grabbing; } /* 【修复】强制移除过渡动画防止手势卡顿 */
+    #canvas-img.is-zoomed.is-dragging{ transition: none; cursor: grabbing; }
     /* 拖拽文件到设置界面 */
     .folder-drop.drag-over{ background:var(--bg-panel); border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
 
@@ -661,7 +661,7 @@ let isGrid = false;
 let isShuffle = false;
 let soundEnabled = true;
 let audioCtx = null;
-let currentObjectURL = null; // 【优化 1】新增：用于追踪当前图片的内存地址，防止内存溢出崩溃
+let currentObjectURL = null; // 【优化 1】内存防崩溃追踪变量
 let playedHistory = [];
 let unplayedIndices = []; // 抽奖袋
 const RING_CIRCUMFERENCE = 2 * Math.PI * 34;
@@ -672,8 +672,7 @@ let pinTimeout = null;
 // DOM
 const setupScreen = document.getElementById('setup-screen');
 const playScreen = document.getElementById('play-screen');
-// 【修复】将 const 更改为 let，允许在 iOS 重新分配 input 元素
-let fileInput = document.getElementById('file-input');
+let fileInput = document.getElementById('file-input'); // iPad 文件上传修复
 const startBtn = document.getElementById('start-btn');
 const folderStatus = document.getElementById('folder-status');
 const tabContent = document.getElementById('tab-content');
@@ -704,11 +703,26 @@ function playBeepSound(isEnd = false) {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(isEnd ? 780 : 580, audioCtx.currentTime);
         gain.gain.setValueAtTime(0, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(isEnd ? 0.12 : 0.08, audioCtx.currentTime + 0.03);
+        // 大幅调大音量
+        gain.gain.linearRampToValueAtTime(isEnd ? 0.6 : 0.4, audioCtx.currentTime + 0.03);
         gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + (isEnd ? 0.35 : 0.18));
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + (isEnd ? 0.35 : 0.18));
     } catch (e) {}
+}
+
+function unlockAudioContext() {
+    if (!soundEnabled) return;
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        // 秘籍：偷偷播放0.01秒的无声静音，强制让 iOS 批准后续的音频权限
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0; // 完全静音
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(0); osc.stop(audioCtx.currentTime + 0.01);
+    } catch(e) {}
 }
 
 function toast(message, opts = {}) {
@@ -721,7 +735,7 @@ function toast(message, opts = {}) {
 }
 
 // ============================================================
-// iPad 触控交互与防误触
+// iPad 触控交互修复 (菜单显示/隐藏)
 // ============================================================
 function pokeToolbar() {
     toolbarPinned = true;
@@ -735,7 +749,7 @@ function pokeToolbar() {
     }
 }
 interactionLayer.addEventListener('click', () => {
-    if (justSwiped || justDragged) { justSwiped = false; justDragged = false; return; }
+    if (justSwiped || justDragged) { justSwiped = false; justDragged = false; return; } // 滑动切图/拖动平移后不要再误触发工具栏
     toolbarPinned = !toolbarPinned;
     playScreen.classList.toggle('toolbar-pinned', toolbarPinned);
     clearTimeout(pinTimeout);
@@ -748,7 +762,7 @@ interactionLayer.addEventListener('click', () => {
 });
 
 // ============================================================
-// 【核心修复】图片缩放引擎：支持防糊硬件加速
+// 图片缩放引擎 (触屏双指捏合 / 桌面鼠标滚轮，均支持拖动平移)
 // ============================================================
 let imgScale = 1, imgPanX = 0, imgPanY = 0, imgOriginX = 50, imgOriginY = 50;
 const ZOOM_MIN = 1, ZOOM_MAX = 4;
@@ -756,11 +770,12 @@ const ZOOM_MIN = 1, ZOOM_MAX = 4;
 function applyImgTransform() {
     canvasImg.style.transformOrigin = `${imgOriginX}% ${imgOriginY}%`;
     const flipPart = isFlipped ? 'scaleX(-1) ' : '';
-    // 【修复】加入 translateZ(0) 强制激活苹果 GPU 硬件渲染，解决放大变模糊和失真的问题
-    canvasImg.style.transform = `${flipPart}translate(${imgPanX}px, ${imgPanY}px) scale(${imgScale}) translateZ(0)`;
+    canvasImg.style.transform = `${flipPart}translate(${imgPanX}px, ${imgPanY}px) scale(${imgScale})`;
     canvasImg.classList.toggle('is-zoomed', imgScale > 1.001);
 }
 function setZoomOrigin(clientX, clientY) {
+    // 图片元素本身始终铺满整个屏幕 (position:absolute; inset:0)，直接用窗口尺寸换算百分比，
+    // 不受当前缩放比例影响，比 getBoundingClientRect() 更稳妥。
     imgOriginX = (clientX / window.innerWidth) * 100;
     imgOriginY = (clientY / window.innerHeight) * 100;
 }
@@ -771,21 +786,19 @@ function resetZoomState() {
 }
 
 // ============================================================
-// 【核心修复】触控手势：加入 60 帧 requestAnimationFrame 解决卡顿
+// 触控手势：左右滑动切图 / 双指捏合缩放 / 双击恢复原始大小 / 放大后单指拖动平移
 // ============================================================
 let touchStartX = 0, touchStartY = 0, touchStartTime = 0, justSwiped = false, justDragged = false;
 let lastTapTime = 0;
 let pinchStartDist = 0, pinchStartScale = 1, isPinching = false;
 let panLastX = 0, panLastY = 0;
-let rafPending = false; // 渲染锁
 const SWIPE_THRESHOLD = 48;
 const touchDist = (t0, t1) => Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
 
 interactionLayer.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
         isPinching = true;
-        // 【修复】马上移除动画过渡，防止由于动画干扰造成橡胶带一样的卡顿手感
-        canvasImg.classList.add('is-dragging');
+        canvasImg.classList.add('is-dragging'); // 【修复 3.1】双指缩放时添加拖拽状态，去除过渡动画以解决重影
         pinchStartDist = touchDist(e.touches[0], e.touches[1]);
         pinchStartScale = imgScale;
         const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
@@ -799,55 +812,43 @@ interactionLayer.addEventListener('touchstart', (e) => {
 
 interactionLayer.addEventListener('touchmove', (e) => {
     if (e.touches.length === 2) {
-        e.preventDefault(); 
-        if(rafPending) return;
-        rafPending = true;
+        e.preventDefault(); // 阻止系统级整页缩放，交给我们自己处理图片缩放
         const newDist = touchDist(e.touches[0], e.touches[1]);
         imgScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, pinchStartScale * (newDist / pinchStartDist)));
-        requestAnimationFrame(() => { applyImgTransform(); rafPending = false; });
+        applyImgTransform();
     } else if (e.touches.length === 1 && imgScale > 1) {
-        if(rafPending) return;
-        rafPending = true;
         const dx = e.touches[0].clientX - panLastX, dy = e.touches[0].clientY - panLastY;
         panLastX = e.touches[0].clientX; panLastY = e.touches[0].clientY;
         imgPanX += dx; imgPanY += dy;
-        requestAnimationFrame(() => { applyImgTransform(); rafPending = false; });
+        applyImgTransform();
     }
 }, { passive: false });
 
 interactionLayer.addEventListener('touchend', (e) => {
     canvasImg.classList.remove('is-dragging');
-    
     if (isPinching) {
         isPinching = false; justDragged = true;
-        if (imgScale <= 1.001) { imgPanX = 0; imgPanY = 0; } 
+        if (imgScale <= 1.001) { imgPanX = 0; imgPanY = 0; } // 缩回原尺寸时清空平移，避免下次放大位置错乱
         if (e.touches.length === 1) { panLastX = e.touches[0].clientX; panLastY = e.touches[0].clientY; }
         return;
     }
+    if (imgScale > 1) { justDragged = true; return; } // 放大状态下的单指操作是平移，不做滑动切图/双击判定
 
     const touch = e.changedTouches[0]; if (!touch) return;
     const dx = touch.clientX - touchStartX, dy = touch.clientY - touchStartY;
     const dt = Date.now() - touchStartTime;
-
-    // 【核心修复】将双击检测移到了最前面！现在即使图片是在放大状态，双击依然能执行重置
-    const now = Date.now();
-    if (now - lastTapTime < 320 && Math.abs(dx) < 12 && Math.abs(dy) < 12) {
-        lastTapTime = 0;
-        resetZoomState(); 
-        justDragged = true; // 防止触发其它误点击
-        return;
-    } else {
-        lastTapTime = now;
-    }
-
-    // 单指操作的平移返回判定
-    if (imgScale > 1) { justDragged = true; return; }
-
-    // 左右切图
     if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600) {
         justSwiped = true;
         if (dx < 0) nextImg(); else prevImg();
         return;
+    }
+    // 双击检测：仅在已放大时用于恢复原始大小
+    const now = Date.now();
+    if (now - lastTapTime < 320 && Math.abs(dx) < 12 && Math.abs(dy) < 12) {
+        lastTapTime = 0;
+        resetZoomState(); // 【修复 3.2】调用恢复原始尺寸的函数
+    } else {
+        lastTapTime = now;
     }
 }, { passive: true });
 
@@ -883,6 +884,7 @@ window.addEventListener('mouseup', () => {
 });
 interactionLayer.addEventListener('dblclick', () => { resetZoomState(); });
 
+// 首次进入时给用户一个操作提示 (触屏 / 桌面各自的手势不同)
 let onboardShown = false;
 function maybeShowTouchOnboarding() {
     if (onboardShown) return;
@@ -893,27 +895,31 @@ function maybeShowTouchOnboarding() {
     setTimeout(() => toast(msg, { duration: 3800 }), 500);
 }
 // ============================================================
-// 设备检测与文件上传支持
+// 设备检测：iPad/iPhone 的 Safari 不支持文件夹选择 (webkitdirectory)，
 // ============================================================
 const isTouchDevice = (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
+// iPadOS 13+ 的 UA 伪装成 Mac，靠触屏点数区分
 const isIOSFamily = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 if (isTouchDevice) document.body.classList.add('touch-device');
 if (isIOSFamily) {
-    // 【修复】彻底重建 input 元素，防止 Safari 依然禁用多选
+    // 【修复 1】重建 input 元素，彻底移除文件夹属性，避免 iPad 只能单选
     const newInput = document.createElement('input');
     newInput.type = 'file';
     newInput.id = 'file-input';
-    newInput.multiple = true; 
+    newInput.multiple = true; // 强制开启多选
     newInput.accept = 'image/*';
     fileInput.parentNode.replaceChild(newInput, fileInput);
-    fileInput = newInput;
+    fileInput = newInput; 
     
-    document.getElementById('folder-btn-label').textContent = '选择多张图片';
+    document.getElementById('folder-btn-label').textContent = '选择图片(可多选)';
     const hint = document.getElementById('platform-hint');
-    hint.textContent = '提示：苹果系统处理多张图片(特别是在 iCloud)时会有几秒延迟，属正常现象。';
+    hint.textContent = 'iPad / iPhone 提示：在弹出的"文件"或"照片"里，可长按或滑动框选多张图片一次性导入';
     hint.classList.remove('hidden-ui');
 }
 
+// ============================================================
+// 桌面端拖拽文件夹/图片到设置界面
+// ============================================================
 const folderBtn = document.getElementById('folder-btn');
 async function collectFilesFromDataTransfer(dataTransfer) {
     const out = [];
@@ -944,29 +950,17 @@ folderBtn.addEventListener('drop', async (e) => {
     handleIncomingFiles(files);
 });
 
-// 【核心修复】加入处理中的状态提示，解决苹果相册点击加载时的假死焦虑
-fileInput.addEventListener('change', (e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    
-    // 给系统留出绘制时间展示加载中状态，缓解大量图片带来的系统阻塞
-    folderStatus.innerHTML = `<span style="color:var(--accent)"><i class="icon-inline">${svgIcon('stopwatch')}</i> iOS 正在转换格式与加载，请稍候...</span>`;
-    startBtn.disabled = true;
-    
-    setTimeout(() => {
-        handleIncomingFiles(files);
-    }, 150);
-});
-
+// ============================================================
+// 设置界面逻辑
+// ============================================================
 function handleIncomingFiles(fileList) {
     const files = Array.from(fileList);
     const IMG_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/i;
     const filtered = files.filter(file => file.type.startsWith('image/') || IMG_EXT_RE.test(file.name));
-    
-    // 【优化 3】新增：按文件名进行“自然排序”（确保 10.jpg 乖乖排在 2.jpg 后面）
-    filtered.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    
     const inPlayScreen = !playScreen.classList.contains('hidden-ui');
+
+    // 【优化 3】自然排序：按文件名中的数字大小正确排序，防止图片错乱
+    filtered.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
 
     if (filtered.length === 0) {
         if (inPlayScreen) toast('未能在该文件夹中找到图片', { icon: 'triangle-exclamation' });
@@ -984,6 +978,7 @@ function handleIncomingFiles(fileList) {
     if (isShuffle) initShuffleBag();
     if (currentMode === 'custom') startStructuredSession(); else loadCurrentImage();
 }
+fileInput.addEventListener('change', (e) => handleIncomingFiles(e.target.files));
 
 function renderPracticeTimeButtons() {
     return `
@@ -1039,19 +1034,15 @@ startBtn.addEventListener('click', () => {
     if (images.length === 0) return;
     if (currentMode === 'custom' && buildQueue(customRows).length === 0) { toast('请先编辑训练计划', { icon: 'triangle-exclamation' }); return; }
     
-    // 【优化 2】新增：利用用户点击按钮的瞬间，激活苹果设备的音频权限，防止倒计时声音被拦截
-    if (soundEnabled) {
-        try {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-        } catch (e) {}
-    }
+    // 强制解锁音频权限，避免静音
+    unlockAudioContext();
     
     setupScreen.classList.add('hidden-ui');
     playScreen.classList.remove('hidden-ui');
     playScreen.classList.add('screen-fade');
-    currentIndex = 0; isPaused = false; playedHistory = [];
     
+    // 【这几行代码是网页启动倒计时和加载图片的核心，绝对不能删！】
+    currentIndex = 0; isPaused = false; playedHistory = [];
     if (isShuffle) initShuffleBag();
     btnPause.innerHTML = `<i class="icon-inline">${svgIcon('pause')}</i>`;
     pokeToolbar(); // 开始时提示一下工具栏位置
@@ -1060,11 +1051,15 @@ startBtn.addEventListener('click', () => {
     if (currentMode === 'custom') startStructuredSession(); else loadCurrentImage();
 });
 
+// ============================================================
+// 抽卡袋随机算法 (完全无重复直到抽空)
+// ============================================================
 function initShuffleBag() {
     unplayedIndices = [];
     for (let i = 0; i < images.length; i++) {
         if (i !== currentIndex) unplayedIndices.push(i);
     }
+    // Fisher-Yates 洗牌
     for (let i = unplayedIndices.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [unplayedIndices[i], unplayedIndices[j]] = [unplayedIndices[j], unplayedIndices[i]];
@@ -1092,6 +1087,7 @@ function pickPrevIndex() {
         let prev = playedHistory.pop();
         if (isShuffle) {
             unplayedIndices.push(currentIndex);
+            // 随便混洗一下袋子防止它必定最后出
             for (let i = unplayedIndices.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [unplayedIndices[i], unplayedIndices[j]] = [unplayedIndices[j], unplayedIndices[i]];
@@ -1102,6 +1098,9 @@ function pickPrevIndex() {
     return (currentIndex - 1 + images.length) % images.length;
 }
 
+// ============================================================
+// 自定义训练计划 & 弹窗逻辑
+// ============================================================
 let customRowsBackup = null;
 function openCustomModal() {
     if (customRows.length === 0) customRows = [{ count: 1, seconds: 30, isRest: false }];
@@ -1168,6 +1167,7 @@ function moveRow(dir) { const newIndex = selectedRowIndex + dir; if (newIndex < 
 function formatDurationShort(t) { const h = Math.floor(t / 3600); const m = Math.floor((t % 3600) / 60); const s = t % 60; let o = ''; if (h > 0) o += `${h}时`; if (m > 0) o += `${m}分`; if (s > 0 || o === '') o += `${s}秒`; return o; }
 function updateTotalDurationDisplay() { document.getElementById('total-duration-display').textContent = formatDurationShort(customRows.reduce((sum, r) => sum + r.count * r.seconds, 0)); }
 
+// 预设保存加载
 const PRESET_KEY = 'flowreference_presets';
 function loadPresets() { try { return JSON.parse(localStorage.getItem(PRESET_KEY)) || {}; } catch (e) { return {}; } }
 function savePresets(obj) { localStorage.setItem(PRESET_KEY, JSON.stringify(obj)); }
@@ -1216,6 +1216,9 @@ function openLoadPresetPopover(e) {
     });
 }
 
+// ============================================================
+// 课程队列引擎
+// ============================================================
 function buildQueue(rows) {
     const q = [];
     rows.forEach(r => { if (r.isRest) q.push({ type: 'rest', seconds: r.seconds }); else { for (let i = 0; i < r.count; i++) q.push({ type: 'image', seconds: r.seconds }); } });
@@ -1246,6 +1249,9 @@ function showRestOverlay(on) {
     restOverlay.classList.toggle('hidden-ui', !on); canvasImg.classList.toggle('is-resting', on); timerBadge.classList.toggle('is-rest', on);
 }
 
+// ============================================================
+// 播放器与倒计时
+// ============================================================
 function beginCountdown(totalSeconds, onComplete) {
     clearInterval(timerInterval); timeRemaining = totalSeconds; updateCountdownDisplay(totalSeconds);
     if (showTimer) { timerBadge.classList.remove('hidden-ui'); } else { timerBadge.classList.add('hidden-ui'); }
@@ -1272,20 +1278,15 @@ function updateCountdownDisplay(total) {
 function loadCurrentImage(afterLoad, skipAttempts) {
     if (images.length === 0) { exitToMenu(); return; }
     skipAttempts = skipAttempts || 0;
-    
-    // 【优化 1】核心修复：切换图片前，务必销毁上一张图的内存，拯救 iPad 运存
-    if (currentObjectURL) {
-        URL.revokeObjectURL(currentObjectURL);
-        currentObjectURL = null;
-    }
-    
-    const file = images[currentIndex]; 
-    currentObjectURL = URL.createObjectURL(file); // 赋值给全局变量
-    
+    const file = images[currentIndex]; const objectURL = URL.createObjectURL(file);
     const img = new Image();
     img.onload = function () {
+        // 【优化 1】清理内存，防止 iPad 崩溃闪退
+        if (currentObjectURL) URL.revokeObjectURL(currentObjectURL); 
+        currentObjectURL = objectURL; 
+
         resetZoomState();
-        canvasImg.src = currentObjectURL;
+        canvasImg.src = objectURL;
         document.getElementById('info-name').innerText = file.name;
         document.getElementById('info-details').innerText = `${this.width}x${this.height} px / ${(file.size / 1024).toFixed(0)} KB`;
         updateVisuals();
@@ -1293,11 +1294,7 @@ function loadCurrentImage(afterLoad, skipAttempts) {
         if (afterLoad) afterLoad(); else startTimerLogic();
     };
     img.onerror = function () {
-        // 【优化 1】加载失败时同样清理内存
-        if (currentObjectURL) {
-            URL.revokeObjectURL(currentObjectURL);
-            currentObjectURL = null;
-        }
+        URL.revokeObjectURL(objectURL);
         toast(`「${file.name}」格式无法显示,已跳过`, { icon: 'triangle-exclamation' });
         images.splice(currentIndex, 1);
         if (images.length === 0) { toast('所有图片都无法加载,请检查图片格式', { icon: 'triangle-exclamation' }); exitToMenu(); return; }
@@ -1305,7 +1302,7 @@ function loadCurrentImage(afterLoad, skipAttempts) {
         if (currentIndex >= images.length) currentIndex = 0;
         loadCurrentImage(afterLoad, skipAttempts + 1);
     };
-    img.src = currentObjectURL;
+    img.src = objectURL;
 }
 
 function startTimerLogic() {
@@ -1323,6 +1320,7 @@ function startTimerLogic() {
     }
 }
 
+// 控制动作
 function nextImg() {
     if (images.length === 0) return; pokeToolbar();
     if (currentMode === 'custom') advanceQueue(); else { currentIndex = pickNextIndex(); loadCurrentImage(); }
@@ -1352,21 +1350,29 @@ function exitToMenu() {
     clearInterval(timerInterval); timerBadge.classList.remove('is-danger'); showRestOverlay(false);
     stepCounter.classList.add('hidden-ui'); progressTrack.style.width = '0%';
     playScreen.classList.add('hidden-ui'); setupScreen.classList.remove('hidden-ui'); setupScreen.classList.add('screen-fade');
-    
-    // 【优化 1】退出到主菜单时，彻底清空画面和内存
-    if (currentObjectURL) {
-        URL.revokeObjectURL(currentObjectURL);
-        currentObjectURL = null;
-    }
-    canvasImg.src = '';
-    
     if (images.length === 0) { folderStatus.innerHTML = ''; startBtn.disabled = true; }
 }
 
 // 视觉/功能工具
-function toggleSound() { soundEnabled = !soundEnabled; const btn = document.getElementById('btn-sound'); btn.classList.toggle('active', soundEnabled); btn.innerHTML = svgIcon(soundEnabled ? 'volume-high' : 'volume-xmark'); }
+function updateVisuals() {
+    applyImgTransform();
+    canvasImg.style.filter = isBW ? 'grayscale(100%) contrast(120%)' : 'none';
+}
+function toggleFlip() { isFlipped = !isFlipped; updateVisuals(); }
+function toggleBW() { isBW = !isBW; document.getElementById('btn-bw').classList.toggle('active', isBW); updateVisuals(); }
+function toggleInfo() { showInfo = !showInfo; topInfo.classList.toggle('hidden-ui', !showInfo); document.getElementById('btn-info').classList.toggle('active', showInfo); }
+function toggleGrid() { isGrid = !isGrid; document.getElementById('grid-overlay').classList.toggle('hidden-ui', !isGrid); document.getElementById('btn-grid').classList.toggle('active', isGrid); }
+function toggleTimerVis() { showTimer = !showTimer; timerBadge.classList.toggle('hidden-ui', !showTimer); document.getElementById('btn-timer').classList.toggle('active', showTimer); }
+function toggleSound() { 
+    soundEnabled = !soundEnabled; 
+    const btn = document.getElementById('btn-sound'); 
+    btn.classList.toggle('active', soundEnabled); 
+    btn.innerHTML = svgIcon(soundEnabled ? 'volume-high' : 'volume-xmark'); 
+    if(soundEnabled) unlockAudioContext(); 
+}
 function toggleShuffle() { isShuffle = !isShuffle; playedHistory = []; if (isShuffle) initShuffleBag(); document.getElementById('btn-shuffle').classList.toggle('active', isShuffle); }
 
+// 键盘事件
 document.addEventListener('keydown', (e) => {
     if (playScreen.classList.contains('hidden-ui')) return;
     if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
