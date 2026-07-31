@@ -100,7 +100,7 @@
     .folder-drop:active{ transform:scale(.985); }
     .folder-drop-icon { margin-right: 8px; color: var(--accent-hover); }
     #file-input { display: none !important; } /* 彻底隐藏原生按钮 */
-    #folder-status { font-size: 12px; color: var(--text-muted); margin-top: 8px; height: 16px; }
+    #folder-status { font-size: 12px; color: var(--text-muted); margin-top: 8px; min-height: 16px; text-align: center; }
 
     /* 模式面板 */
     .mode-section { width: 100%; border-top: 1px solid var(--border-soft); padding-top: 24px; margin-top: 20px; }
@@ -180,6 +180,7 @@
         position:absolute; top: 0; left: 0; width: 100%; height: 100%;
         object-fit: contain; 
         transition: transform .2s ease, filter .2s ease, opacity .3s ease;
+        will-change: transform; /* 【修复】强制浏览器做硬件加速准备 */
         z-index: 2; pointer-events: none;
     }
     #canvas-img.is-resting{ opacity:.15; filter:blur(2px) grayscale(60%); }
@@ -243,7 +244,7 @@
         box-shadow:0 24px 50px -14px rgba(0,0,0,.6);
         opacity:0; transform:translate(-50%,16px); transition:opacity .25s ease, transform .25s ease;
     }
-    /* 【修复 2】排除了触控设备，解决 iPad 笔离开后工具栏不消失的 Bug */
+    /* 【修复】排除了触控设备，解决 iPad 笔离开后工具栏卡住不消失的 Bug */
     body:not(.touch-device) #play-screen:hover .bottom-toolbar { opacity:1; transform:translate(-50%,0); }
     #play-screen.toolbar-pinned .bottom-toolbar { opacity:1; transform:translate(-50%,0); }
     
@@ -289,3 +290,1072 @@
         background:var(--bg-panel); border-radius:16px; box-shadow:0 30px 70px -20px rgba(0,0,0,.6);
         width:660px; max-width: 94%; display:flex; flex-direction:column; border:1px solid var(--border-soft); overflow:hidden;
         animation:modalPopIn .25s cubic-bezier(.2,.8,.3,1.1); position:relative;
+    }
+    .custom-modal::before{
+        content:""; position:absolute; top:0; left:15%; right:15%; height:1px; z-index:1;
+        background:linear-gradient(90deg, transparent, rgba(157,117,230,.5), transparent);
+    }
+    .modal-header { text-align: center; padding: 14px 0; border-bottom: 1px solid var(--border-soft); font-size: 15px; font-weight: 500; }
+    .custom-modal-flex{ display:flex; height:320px; }
+    .custom-modal-left{ width:50%; border-right:1px solid var(--border-soft); display:flex; flex-direction:column; background:var(--bg-canvas); }
+    #row-list{ flex:1; overflow-y:auto; padding:10px; }
+    .modal-left-toolbar{ padding: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; border-top: 1px solid var(--border-soft); flex-wrap: wrap; }
+    
+    .custom-modal-right{ width:50%; padding:20px; display:flex; flex-direction:column; align-items:center; }
+    .right-title{ color:var(--text-muted); font-size:12px; margin-bottom:16px; letter-spacing:0.05em; font-weight: 600; }
+    .field-wrap{ margin-bottom:16px; text-align:center; width: 100%; display: flex; flex-direction: column; align-items: center; }
+    .field-label{ display:block; font-size:12px; color:var(--text-muted); margin-bottom:6px; }
+    
+    .time-inputs{ display:flex; align-items:center; justify-content: center; gap:6px; }
+    .field-input{
+        background:var(--bg-panel-alt); border:1px solid var(--border-soft); color:var(--text);
+        border-radius:7px; text-align:center; transition:border-color .15s ease;
+        padding: 6px 0; outline: none;
+    }
+    .field-input:focus{ border-color:var(--accent); }
+    .w-16{ width:64px; } .w-11{ width:44px; }
+    .unit-text{ font-size:12px; color:var(--text-muted); }
+    
+    .subtotal-text{ font-size:12px; color:var(--text-muted); margin-bottom:16px; }
+    .total-wrap{ margin-top:auto; text-align:center; width:100%; border-radius:8px; padding:12px 0; background:var(--bg-panel-alt); }
+    .total-title{ font-size:12px; color:var(--text-muted); margin:0; }
+    .total-val{ font-size:20px; color:var(--accent); margin-top:2px; margin-bottom:0; font-weight: 600; }
+    
+    .modal-footer{ display:flex; justify-content:flex-end; gap:8px; padding:12px; border-top:1px solid var(--border-soft); }
+
+    @keyframes overlayFadeIn{ from{ opacity:0; } to{ opacity:1; } }
+    @keyframes modalPopIn{ from{ opacity:0; transform:scale(.96) translateY(6px); } to{ opacity:1; transform:scale(1) translateY(0); } }
+    @keyframes rowFlashIn{ 0%{ background:var(--accent-soft); transform:translateX(-4px); } 100%{ background:var(--bg-panel-alt); transform:translateX(0); } }
+    
+    .row-item.just-added{ animation:rowFlashIn .6s ease; }
+    .row-item{
+        display:flex; align-items:center; gap:10px; padding:9px 12px 9px 10px; border-radius:9px; margin-bottom:5px; cursor:pointer;
+        background:var(--bg-panel-alt); border-left:2.5px solid transparent; transition:all .15s ease; font-size:13px;
+    }
+    .row-item:hover{ background:var(--bg-panel-hover); transform:translateX(1px); }
+    .row-item.selected{ border-left-color:var(--accent); background:rgba(157,117,230,.15); box-shadow:0 2px 10px -4px rgba(0,0,0,.35); }
+    .row-item.is-rest{ color:var(--rest); }
+    .row-item.is-rest.selected{ border-left-color:var(--rest); background:var(--rest-soft); }
+    .row-step-badge{
+        flex-shrink:0; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+        font-size:10.5px; font-weight:600; background:var(--bg-panel-hover); color:var(--text-faint); font-family:'JetBrains Mono',monospace;
+    }
+    .row-item.selected .row-step-badge{ background:var(--accent); color:var(--accent-ink); }
+    .row-item.is-rest.selected .row-step-badge{ background:var(--rest); color:var(--rest-ink); }
+    .row-item-text{ flex:1; display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    .modal-tool-btn{
+        width:32px; height:32px; border-radius:7px; display:flex; align-items:center; justify-content:center;
+        color:var(--text-muted); transition:all .15s ease; border: none; background: none; cursor: pointer;
+    }
+    .modal-tool-btn:hover{ background:var(--bg-panel-hover); color:var(--text); transform:translateY(-1px); }
+    .modal-tool-btn:active{ transform:scale(.92); }
+    .modal-tool-btn:disabled{ opacity:.3; cursor:not-allowed; }
+    .modal-tool-btn:disabled:hover{ background:none; color:var(--text-muted); transform:none; }
+    .modal-tool-btn-danger:hover{ background:var(--danger-soft); color:var(--danger); }
+
+    .toolbar-segment{ display:flex; align-items:center; gap:2px; background:var(--bg-canvas); border:1px solid var(--border-soft); border-radius:10px; padding:2px; }
+
+    .popover{
+        position:absolute; background:var(--bg-panel-alt); border:1px solid var(--border);
+        border-radius:10px; box-shadow:0 20px 40px -12px rgba(0,0,0,.5); z-index:200; overflow:hidden; min-width:200px; padding: 10px;
+    }
+    .popover-input { width: 100%; padding: 6px 8px; font-size: 14px; margin-bottom: 8px; box-sizing: border-box; text-align: left; }
+    .popover-item{
+        display:flex; align-items:center; justify-content:space-between; gap:8px;
+        padding:9px 12px; font-size:13px; cursor:pointer; transition:background .12s ease; margin: -10px -10px 0 -10px;
+    }
+    .popover-item:not(:first-child) { margin-top: 0; }
+    .popover-item:hover{ background:var(--bg-panel-hover); }
+    .popover-item .del-x{ color:var(--text-faint); transition:color .12s ease; }
+    .popover-item .del-x:hover{ color:var(--danger); }
+
+    #toast-stack{
+        position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+        z-index:300; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none;
+    }
+    .toast{
+        background:var(--bg-panel-alt); border:1px solid var(--border); color:var(--text);
+        padding:10px 18px; border-radius:99px; font-size:13.5px; box-shadow:0 12px 30px -10px rgba(0,0,0,.5);
+        opacity:0; transform:translateY(8px); transition:opacity .25s ease, transform .25s ease;
+        display:flex; align-items:center; gap:8px;
+    }
+    .toast.show{ opacity:1; transform:translateY(0); }
+    .toast i{ color:var(--accent); }
+
+    .screen-fade{ animation:screenFadeIn .35s ease; }
+    @keyframes screenFadeIn{ from{ opacity:0; } to{ opacity:1; } }
+
+    /* ================= 触控设备 & 安全区适配 (iPad / 手机) ================= */
+    /* 圆角屏、Home 指示条留白，避免控件被系统手势遮挡/误触 */
+    .bottom-toolbar{ margin-bottom: env(safe-area-inset-bottom, 0px); }
+    #top-info{ margin-top: env(safe-area-inset-top, 0px); }
+    #timer-badge{ margin-top: env(safe-area-inset-top, 0px); margin-right: env(safe-area-inset-right, 0px); }
+    #step-counter{ margin-top: env(safe-area-inset-top, 0px); margin-left: env(safe-area-inset-left, 0px); }
+    #toast-stack{ margin-bottom: env(safe-area-inset-bottom, 0px); }
+
+    /* 触控设备上放大可点击热区 (Apple HIG 建议 ≥44px)，避免误触 */
+    .touch-device .tool-btn{ width:44px; height:44px; }
+    .touch-device .ctrl-btn{ width:50px; height:50px; }
+    .touch-device .ctrl-btn.big{ width:60px; height:60px; }
+    .touch-device .time-btn{ padding:11px 16px; }
+
+    /* 图片查看缩放 (双击放大细看动态/结构) */
+    #canvas-img.is-zoomed{ cursor: grab; transition: transform .15s ease-out; }
+    #canvas-img.is-zoomed.is-dragging{ transition: none !important; cursor: grabbing; } /* 【修复】强制移除过渡动画防止手势卡顿 */
+    /* 拖拽文件到设置界面 */
+    .folder-drop.drag-over{ background:var(--bg-panel); border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+
+    /* 响应式调整 (手机与平板) */
+    @media (max-width: 640px) {
+        .setup-card { padding: 24px 20px; }
+        .setup-title { font-size: 24px; }
+        .mode-grid { gap: 8px; }
+        .tab-btn { padding: 12px 8px; gap: 8px; }
+        .tab-btn .tab-icon { width: 28px; height: 28px; font-size: 14px; }
+        .custom-modal { max-height: 90vh; }
+        .custom-modal-flex { flex-direction: column; height: auto !important; max-height: 70vh; overflow-y: auto; }
+        .custom-modal-left, .custom-modal-right { width: 100% !important; border-right: none; }
+        .bottom-toolbar { width: 94%; padding: 10px 12px 8px; }
+        .controls-main { gap: 12px; }
+        .ctrl-btn { width: 42px; height: 42px; font-size: 14px; }
+        .ctrl-btn.big { width: 52px; height: 52px; font-size: 17px; }
+        .controls-tools { flex-wrap: wrap; justify-content: center; gap: 4px; }
+        .tool-btn { width: 40px; height: 40px; }
+        #timer-badge { width: 56px; height: 56px; top: 10px; right: 10px; }
+        #timer-badge svg { width: 56px; height: 56px; }
+        #timer-display { font-size: 14px; }
+    }
+</style>
+</head>
+<body>
+
+<!-- 设置界面 -->
+<div id="setup-screen">
+    <div class="setup-card screen-fade">
+        <h1 class="font-round setup-title">速写<span class="highlight">训练</span></h1>
+        <p class="setup-subtitle">T门动态速写 &middot; 手绘参考计时工具</p>
+
+        <!-- 文件夹选择区 (桌面支持拖拽文件夹/图片到此处) -->
+        <div id="folder-btn" class="folder-drop" onclick="document.getElementById('file-input').click()">
+            <i data-icon="folder-open" class="folder-drop-icon"></i><span id="folder-btn-label">选择素材文件夹</span>
+        </div>
+        <input type="file" id="file-input" webkitdirectory directory multiple accept="image/*">
+        <p id="folder-status"></p>
+        <p id="platform-hint" class="hidden-ui" style="font-size:11px; color:var(--text-faint); margin-top:2px; text-align:center; line-height:1.5;"></p>
+
+        <!-- 模式面板 -->
+        <div class="mode-section">
+            <p class="mode-title">训练模式</p>
+            <div class="mode-grid">
+                <div class="tab-btn active" data-tab="practice">
+                    <span class="tab-icon"><i data-icon="stopwatch"></i></span>
+                    <span>定时练习</span>
+                </div>
+                <div class="tab-btn" data-tab="class">
+                    <span class="tab-icon"><i data-icon="graduation-cap"></i></span>
+                    <span>课堂模式</span>
+                </div>
+                <div class="tab-btn" data-tab="relaxed">
+                    <span class="tab-icon"><i data-icon="chair"></i></span>
+                    <span>休闲模式</span>
+                </div>
+                <div class="tab-btn" data-tab="custom">
+                    <span class="tab-icon"><i data-icon="pen-to-square"></i></span>
+                    <span>自定义</span>
+                </div>
+            </div>
+
+            <!-- 动态内容区 -->
+            <div id="tab-content" class="tab-content-container"></div>
+        </div>
+
+        <button id="start-btn" class="btn-primary start-btn" disabled>
+            开始作画
+        </button>
+    </div>
+</div>
+
+<!-- 自定义模态框 -->
+<div id="custom-modal-overlay" class="hidden-ui">
+    <div class="custom-modal">
+        <div class="modal-header">自定义训练计划</div>
+        <div class="custom-modal-flex">
+            <!-- 左侧列表 -->
+            <div class="custom-modal-left">
+                <div id="row-list"></div>
+                <div class="modal-left-toolbar">
+                    <div class="toolbar-segment">
+                        <button class="modal-tool-btn" title="新增绘画任务" onclick="addRow(false)"><i data-icon="plus"></i></button>
+                        <button class="modal-tool-btn" title="新增休息任务" onclick="addRow(true)"><i data-icon="mug-hot"></i></button>
+                    </div>
+                    <div class="toolbar-segment">
+                        <button id="btn-row-up" class="modal-tool-btn" title="上移该行" onclick="moveRow(-1)"><i data-icon="caret-up"></i></button>
+                        <button id="btn-row-down" class="modal-tool-btn" title="下移该行" onclick="moveRow(1)"><i data-icon="caret-down"></i></button>
+                    </div>
+                    <div class="toolbar-segment">
+                        <button id="btn-remove-row" class="modal-tool-btn modal-tool-btn-danger" title="删除该行" onclick="removeRow()"><i data-icon="trash"></i></button>
+                    </div>
+                    <div class="toolbar-segment">
+                        <button class="modal-tool-btn" title="加载已保存的预设" onclick="openLoadPresetPopover(event)"><i data-icon="list-preset"></i></button>
+                        <button class="modal-tool-btn" title="保存当前计划为预设" onclick="openSavePresetPrompt(event)"><i data-icon="bookmark"></i></button>
+                    </div>
+                </div>
+            </div>
+            <!-- 右侧设置 -->
+            <div class="custom-modal-right">
+                <p class="right-title">当前行设置</p>
+
+                <div id="row-count-field" class="field-wrap">
+                    <label class="field-label">图片数量</label>
+                    <input type="number" min="1" id="input-count" class="field-input w-16" oninput="onRowFieldChange()">
+                </div>
+
+                <div class="field-wrap">
+                    <label id="row-time-label" class="field-label">每张图时间</label>
+                    <div class="time-inputs">
+                        <input type="number" min="0" id="input-h" class="field-input w-11" oninput="onRowFieldChange()"><span class="unit-text">时</span>
+                        <input type="number" min="0" id="input-m" class="field-input w-11" oninput="onRowFieldChange()"><span class="unit-text">分</span>
+                        <input type="number" min="0" id="input-s" class="field-input w-11" oninput="onRowFieldChange()"><span class="unit-text">秒</span>
+                    </div>
+                </div>
+
+                <p id="row-subtotal-display" class="subtotal-text">本行小计:0秒</p>
+
+                <div class="total-wrap">
+                    <p class="total-title">总训练时长</p>
+                    <p id="total-duration-display" class="total-val font-mono">0秒</p>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost footer-btn" onclick="closeCustomModal(false)">取消</button>
+            <button class="btn-primary footer-btn" onclick="closeCustomModal(true)">确定</button>
+        </div>
+    </div>
+</div>
+
+<!-- 播放界面 -->
+<div id="play-screen" class="hidden-ui">
+    <div id="progress-track" style="width:0%"></div>
+    <div id="play-vignette"></div>
+
+    <div id="top-info" class="hidden-ui">
+        <span id="info-name">Filename.jpg</span>
+        <span style="color:rgba(255,255,255,.25); margin: 0 8px;">&middot;</span>
+        <span id="info-details">1920x1080 px / 100 KB</span>
+    </div>
+
+    <div id="step-counter" class="hidden-ui"></div>
+
+    <div id="timer-badge">
+        <svg width="78" height="78" viewBox="0 0 78 78">
+            <circle id="timer-ring-bg" cx="39" cy="39" r="34" fill="none" stroke-width="4"></circle>
+            <circle id="timer-ring-fg" cx="39" cy="39" r="34" fill="none" stroke-width="4"
+                    stroke-dasharray="213.6" stroke-dashoffset="0"></circle>
+        </svg>
+        <div id="timer-display" class="font-mono">30</div>
+    </div>
+
+    <div id="rest-overlay" class="hidden-ui">
+        <i data-icon="mug-hot"></i>
+        <span>休息一下</span>
+    </div>
+
+    <div id="grid-overlay" class="hidden-ui"></div>
+
+    <!-- 检测 iPad 屏幕点击呼出菜单层 / 滑动切图 / 双击放大 -->
+    <div id="interaction-layer"></div>
+    <!-- 渲染的图片 (绝对定位满屏，自适应) -->
+    <img id="canvas-img" src="" alt="Reference">
+
+    <!-- 底部控制栏 -->
+    <div class="bottom-toolbar">
+        <div class="controls-main">
+            <button class="ctrl-btn" onclick="prevImg()" title="上一张 (←)"><i data-icon="chevron-left"></i></button>
+            <button class="ctrl-btn big" id="btn-pause" onclick="togglePause()" title="暂停/继续 (空格)"><i data-icon="pause"></i></button>
+            <button class="ctrl-btn" onclick="nextImg()" title="下一张 (→)"><i data-icon="chevron-right"></i></button>
+            <button onclick="nextImg()" class="skip-btn" style="margin-left: 12px;">跳过 <i data-icon="forward-step"></i></button>
+        </div>
+        <div class="toolbar-row-divider"></div>
+        <div class="controls-tools">
+            <button class="tool-btn" title="退出" onclick="exitToMenu()"><i data-icon="right-from-bracket"></i></button>
+            <button class="tool-btn" title="图片信息 (I)" id="btn-info" onclick="toggleInfo()"><i data-icon="circle-info"></i></button>
+            <button class="tool-btn" title="更换文件夹" onclick="document.getElementById('file-input').click()"><i data-icon="folder"></i></button>
+            <button class="tool-btn" title="删除图片" onclick="deleteImg()"><i data-icon="trash"></i></button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn active" title="倒计时声音提示 (M)" id="btn-sound" onclick="toggleSound()"><i data-icon="volume-high"></i></button>
+            <button class="tool-btn" title="随机播放 (S)" id="btn-shuffle" onclick="toggleShuffle()"><i data-icon="shuffle"></i></button>
+            <button class="tool-btn" title="网格辅助 (G)" id="btn-grid" onclick="toggleGrid()"><i data-icon="table-cells"></i></button>
+            <button class="tool-btn" title="水平翻转 (F)" onclick="toggleFlip()"><i data-icon="arrows-left-right"></i></button>
+            <button class="tool-btn" title="黑白滤镜 (B)" id="btn-bw" onclick="toggleBW()"><i data-icon="circle-half-stroke"></i></button>
+            <button class="tool-btn active" title="显示/隐藏倒计时 (T)" id="btn-timer" onclick="toggleTimerVis()"><i data-icon="stopwatch"></i></button>
+        </div>
+    </div>
+</div>
+
+<div id="toast-stack"></div>
+
+<script>
+// ============================================================
+// SVG 图标库
+// ============================================================
+const ICONS = {
+    'folder-open': '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H3Z"/><path d="m3 8 1.2 9.4A2 2 0 0 0 6.2 19h11.6a2 2 0 0 0 2-1.6L21 10H3Z"/>',
+    'paintbrush': '<path d="M14 4c2 0 4 2 4 4 0 1.2-.5 2-1.3 2.7L9 18.4a2.5 2.5 0 0 1-3.5 0 2.5 2.5 0 0 1 0-3.5L13.3 7.3C14 6.5 14 5.2 14 4Z"/><path d="M5.5 14.5 3 21l6.5-2.5"/>',
+    'mug-hot': '<path d="M4 9h11v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V9Z"/><path d="M15 10.5h1.5a2.5 2.5 0 0 1 0 5H15"/><path d="M7 2c0 1-1 1-1 2s1 1 1 2M11 2c0 1-1 1-1 2s1 1 1 2"/>',
+    'stopwatch': '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2h5M12 4.5V2"/>',
+    'graduation-cap': '<path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M6 10.5V16c0 1.4 2.7 3 6 3s6-1.6 6-3v-5.5M22 8v6"/>',
+    'chair': '<path d="M6.5 13V5.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1V13"/><path d="M5.5 13h13v3a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-3ZM7 17v3M17 17v3"/>',
+    'pen-to-square': '<path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><path d="m18.4 2.6 3 3L11 16l-4 1 1-4Z"/>',
+    'chevron-left': '<path d="M15 5 8 12l7 7"/>',
+    'chevron-right': '<path d="M9 5l7 7-7 7"/>',
+    'pause': '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+    'play': '<path d="M7 4.2v15.6a.7.7 0 0 0 1.06.6l12.7-7.8a.7.7 0 0 0 0-1.2L8.06 3.6A.7.7 0 0 0 7 4.2Z"/>',
+    'forward-step': '<path d="M5 4.3v15.4a.6.6 0 0 0 .9.5l10.4-7.7a.6.6 0 0 0 0-1L5.9 3.8a.6.6 0 0 0-.9.5Z"/><rect x="17.3" y="4" width="2.2" height="16" rx="1"/>',
+    'right-from-bracket': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+    'circle-info': '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.51v.01"/>',
+    'folder': '<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Z"/>',
+    'trash': '<path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/>',
+    'shuffle': '<path d="M4 6h3.3L16 18h4M17 6h3v3M20 18v-3l-3 3M4 18h3.3L11 13"/>',
+    'table-cells': '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    'arrows-left-right': '<path d="m8 3-4 4 4 4M4 7h9M16 21l4-4-4-4M20 17h-9"/>',
+    'circle-half-stroke': '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/>',
+    'check': '<path d="M4 12.5 9.2 18 20 6"/>',
+    'triangle-exclamation': '<path d="M12 3 2 20h20L12 3Z"/><path d="M12 9.8v4M12 17v.01"/>',
+    'xmark': '<path d="M6 6 18 18M18 6 6 18"/>',
+    'plus': '<path d="M12 5v14M5 12h14"/>',
+    'caret-up': '<path d="M6 15l6-6 6 6"/>',
+    'caret-down': '<path d="M6 9l6 6 6-6"/>',
+    'circle-check': '<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 10"/>',
+    'champagne-glasses': '<path d="M12 2v3M6.5 6.5l1.6 1.6M17.5 6.5l-1.6 1.6M4 21l8-14 8 14"/><circle cx="12" cy="12.5" r=".6" fill="currentColor" stroke="none"/>',
+    'bookmark': '<path d="M6 3.5A1.5 1.5 0 0 1 7.5 2h9A1.5 1.5 0 0 1 18 3.5V21l-6-4-6 4V3.5Z"/>',
+    'list-preset': '<rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8 9h8M8 13h8M8 17h5"/>',
+    'volume-high': '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>',
+    'volume-xmark': '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/>'
+};
+function svgIcon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`; }
+function initStaticIcons() { document.querySelectorAll('[data-icon]').forEach(el => el.innerHTML = svgIcon(el.dataset.icon)); }
+initStaticIcons();
+
+// ============================================================
+// 状态管理
+// ============================================================
+let images = [];
+let currentIndex = 0;
+let currentMode = 'practice';
+let practiceTime = 30;
+let timeRemaining = 0;
+let timerInterval = null;
+let isPaused = false;
+let sessionQueue = [];
+let queueIndex = 0;
+let customRows = [{ count: 1, seconds: 30, isRest: false }];
+let selectedRowIndex = 0;
+let justAddedIndex = null;
+let isFlipped = false;
+let isBW = false;
+let showInfo = false;
+let showTimer = true;
+let isGrid = false;
+let isShuffle = false;
+let soundEnabled = true;
+let audioCtx = null;
+let playedHistory = [];
+let unplayedIndices = []; // 抽奖袋
+const RING_CIRCUMFERENCE = 2 * Math.PI * 34;
+const CLASS_FIXED_SECONDS = 30;
+let toolbarPinned = false;
+let pinTimeout = null;
+
+// DOM
+const setupScreen = document.getElementById('setup-screen');
+const playScreen = document.getElementById('play-screen');
+// 【修复】将 const 更改为 let，允许在 iOS 重新分配 input 元素
+let fileInput = document.getElementById('file-input');
+const startBtn = document.getElementById('start-btn');
+const folderStatus = document.getElementById('folder-status');
+const tabContent = document.getElementById('tab-content');
+const canvasImg = document.getElementById('canvas-img');
+const timerDisplay = document.getElementById('timer-display');
+const timerBadge = document.getElementById('timer-badge');
+const timerRingFg = document.getElementById('timer-ring-fg');
+const topInfo = document.getElementById('top-info');
+const btnPause = document.getElementById('btn-pause');
+const restOverlay = document.getElementById('rest-overlay');
+const stepCounter = document.getElementById('step-counter');
+const progressTrack = document.getElementById('progress-track');
+const toastStack = document.getElementById('toast-stack');
+const interactionLayer = document.getElementById('interaction-layer');
+
+timerRingFg.setAttribute('stroke-dasharray', RING_CIRCUMFERENCE.toFixed(1));
+
+// ============================================================
+// 音频与提示
+// ============================================================
+function playBeepSound(isEnd = false) {
+    if (!soundEnabled) return;
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(isEnd ? 780 : 580, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(isEnd ? 0.12 : 0.08, audioCtx.currentTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + (isEnd ? 0.35 : 0.18));
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + (isEnd ? 0.35 : 0.18));
+    } catch (e) {}
+}
+
+function toast(message, opts = {}) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `<i class="icon-inline">${svgIcon(opts.icon || 'circle-check')}</i><span>${message}</span>`;
+    toastStack.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, opts.duration || 2600);
+}
+
+// ============================================================
+// iPad 触控交互与防误触
+// ============================================================
+function pokeToolbar() {
+    toolbarPinned = true;
+    playScreen.classList.add('toolbar-pinned');
+    clearTimeout(pinTimeout);
+    if (!isPaused) {
+        pinTimeout = setTimeout(() => {
+            toolbarPinned = false;
+            playScreen.classList.remove('toolbar-pinned');
+        }, 3000);
+    }
+}
+interactionLayer.addEventListener('click', () => {
+    if (justSwiped || justDragged) { justSwiped = false; justDragged = false; return; }
+    toolbarPinned = !toolbarPinned;
+    playScreen.classList.toggle('toolbar-pinned', toolbarPinned);
+    clearTimeout(pinTimeout);
+    if (toolbarPinned && !isPaused) {
+        pinTimeout = setTimeout(() => {
+            toolbarPinned = false;
+            playScreen.classList.remove('toolbar-pinned');
+        }, 3000);
+    }
+});
+
+// ============================================================
+// 【核心修复】图片缩放引擎：支持防糊硬件加速
+// ============================================================
+let imgScale = 1, imgPanX = 0, imgPanY = 0, imgOriginX = 50, imgOriginY = 50;
+const ZOOM_MIN = 1, ZOOM_MAX = 4;
+
+function applyImgTransform() {
+    canvasImg.style.transformOrigin = `${imgOriginX}% ${imgOriginY}%`;
+    const flipPart = isFlipped ? 'scaleX(-1) ' : '';
+    // 【修复】加入 translateZ(0) 强制激活苹果 GPU 硬件渲染，解决放大变模糊和失真的问题
+    canvasImg.style.transform = `${flipPart}translate(${imgPanX}px, ${imgPanY}px) scale(${imgScale}) translateZ(0)`;
+    canvasImg.classList.toggle('is-zoomed', imgScale > 1.001);
+}
+function setZoomOrigin(clientX, clientY) {
+    imgOriginX = (clientX / window.innerWidth) * 100;
+    imgOriginY = (clientY / window.innerHeight) * 100;
+}
+function resetZoomState() {
+    imgScale = 1; imgPanX = 0; imgPanY = 0; imgOriginX = 50; imgOriginY = 50;
+    canvasImg.classList.remove('is-zoomed', 'is-dragging');
+    applyImgTransform();
+}
+
+// ============================================================
+// 【核心修复】触控手势：加入 60 帧 requestAnimationFrame 解决卡顿
+// ============================================================
+let touchStartX = 0, touchStartY = 0, touchStartTime = 0, justSwiped = false, justDragged = false;
+let lastTapTime = 0;
+let pinchStartDist = 0, pinchStartScale = 1, isPinching = false;
+let panLastX = 0, panLastY = 0;
+let rafPending = false; // 渲染锁
+const SWIPE_THRESHOLD = 48;
+const touchDist = (t0, t1) => Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+
+interactionLayer.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        isPinching = true;
+        // 【修复】马上移除动画过渡，防止由于动画干扰造成橡胶带一样的卡顿手感
+        canvasImg.classList.add('is-dragging');
+        pinchStartDist = touchDist(e.touches[0], e.touches[1]);
+        pinchStartScale = imgScale;
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        setZoomOrigin(midX, midY);
+    } else if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; touchStartTime = Date.now();
+        if (imgScale > 1) { panLastX = touchStartX; panLastY = touchStartY; canvasImg.classList.add('is-dragging'); }
+    }
+}, { passive: true });
+
+interactionLayer.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+        e.preventDefault(); 
+        if(rafPending) return;
+        rafPending = true;
+        const newDist = touchDist(e.touches[0], e.touches[1]);
+        imgScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, pinchStartScale * (newDist / pinchStartDist)));
+        requestAnimationFrame(() => { applyImgTransform(); rafPending = false; });
+    } else if (e.touches.length === 1 && imgScale > 1) {
+        if(rafPending) return;
+        rafPending = true;
+        const dx = e.touches[0].clientX - panLastX, dy = e.touches[0].clientY - panLastY;
+        panLastX = e.touches[0].clientX; panLastY = e.touches[0].clientY;
+        imgPanX += dx; imgPanY += dy;
+        requestAnimationFrame(() => { applyImgTransform(); rafPending = false; });
+    }
+}, { passive: false });
+
+interactionLayer.addEventListener('touchend', (e) => {
+    canvasImg.classList.remove('is-dragging');
+    
+    if (isPinching) {
+        isPinching = false; justDragged = true;
+        if (imgScale <= 1.001) { imgPanX = 0; imgPanY = 0; } 
+        if (e.touches.length === 1) { panLastX = e.touches[0].clientX; panLastY = e.touches[0].clientY; }
+        return;
+    }
+
+    const touch = e.changedTouches[0]; if (!touch) return;
+    const dx = touch.clientX - touchStartX, dy = touch.clientY - touchStartY;
+    const dt = Date.now() - touchStartTime;
+
+    // 【核心修复】将双击检测移到了最前面！现在即使图片是在放大状态，双击依然能执行重置
+    const now = Date.now();
+    if (now - lastTapTime < 320 && Math.abs(dx) < 12 && Math.abs(dy) < 12) {
+        lastTapTime = 0;
+        resetZoomState(); 
+        justDragged = true; // 防止触发其它误点击
+        return;
+    } else {
+        lastTapTime = now;
+    }
+
+    // 单指操作的平移返回判定
+    if (imgScale > 1) { justDragged = true; return; }
+
+    // 左右切图
+    if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600) {
+        justSwiped = true;
+        if (dx < 0) nextImg(); else prevImg();
+        return;
+    }
+}, { passive: true });
+
+// ============================================================
+// 桌面端：鼠标滚轮缩放 / 拖动平移 / 双击恢复原始大小
+// ============================================================
+interactionLayer.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    setZoomOrigin(e.clientX, e.clientY);
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    imgScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, imgScale * factor));
+    if (imgScale <= 1.001) { imgPanX = 0; imgPanY = 0; }
+    applyImgTransform();
+}, { passive: false });
+
+let isMouseDragging = false, mouseDragLastX = 0, mouseDragLastY = 0;
+interactionLayer.addEventListener('mousedown', (e) => {
+    if (imgScale <= 1) return;
+    isMouseDragging = true; mouseDragLastX = e.clientX; mouseDragLastY = e.clientY;
+    canvasImg.classList.add('is-dragging');
+});
+window.addEventListener('mousemove', (e) => {
+    if (!isMouseDragging) return;
+    const dx = e.clientX - mouseDragLastX, dy = e.clientY - mouseDragLastY;
+    mouseDragLastX = e.clientX; mouseDragLastY = e.clientY;
+    imgPanX += dx; imgPanY += dy;
+    applyImgTransform();
+});
+window.addEventListener('mouseup', () => {
+    if (!isMouseDragging) return;
+    isMouseDragging = false; justDragged = true;
+    canvasImg.classList.remove('is-dragging');
+});
+interactionLayer.addEventListener('dblclick', () => { resetZoomState(); });
+
+let onboardShown = false;
+function maybeShowTouchOnboarding() {
+    if (onboardShown) return;
+    onboardShown = true;
+    const msg = isTouchDevice
+        ? '点击画面呼出工具栏 · 左右滑动切图 · 双指捏合缩放,双击恢复原大小'
+        : '滚轮缩放查看细节,拖动平移,双击恢复原大小';
+    setTimeout(() => toast(msg, { duration: 3800 }), 500);
+}
+// ============================================================
+// 设备检测与文件上传支持
+// ============================================================
+const isTouchDevice = (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
+const isIOSFamily = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (isTouchDevice) document.body.classList.add('touch-device');
+if (isIOSFamily) {
+    // 【修复】彻底重建 input 元素，防止 Safari 依然禁用多选
+    const newInput = document.createElement('input');
+    newInput.type = 'file';
+    newInput.id = 'file-input';
+    newInput.multiple = true; 
+    newInput.accept = 'image/*';
+    fileInput.parentNode.replaceChild(newInput, fileInput);
+    fileInput = newInput;
+    
+    document.getElementById('folder-btn-label').textContent = '选择多张图片';
+    const hint = document.getElementById('platform-hint');
+    hint.textContent = '提示：苹果系统处理多张图片(特别是在 iCloud)时会有几秒延迟，属正常现象。';
+    hint.classList.remove('hidden-ui');
+}
+
+const folderBtn = document.getElementById('folder-btn');
+async function collectFilesFromDataTransfer(dataTransfer) {
+    const out = [];
+    const items = dataTransfer.items;
+    if (items && items.length && items[0].webkitGetAsEntry) {
+        async function walk(entry) {
+            if (!entry) return;
+            if (entry.isFile) {
+                await new Promise(res => entry.file(f => { out.push(f); res(); }));
+            } else if (entry.isDirectory) {
+                const reader = entry.createReader();
+                const readAll = () => new Promise(res => reader.readEntries(res));
+                let batch;
+                do { batch = await readAll(); for (const e of batch) await walk(e); } while (batch.length > 0);
+            }
+        }
+        const entries = Array.from(items).map(it => it.webkitGetAsEntry && it.webkitGetAsEntry());
+        for (const en of entries) await walk(en);
+    } else {
+        out.push(...Array.from(dataTransfer.files));
+    }
+    return out;
+}
+['dragenter', 'dragover'].forEach(evt => folderBtn.addEventListener(evt, (e) => { e.preventDefault(); folderBtn.classList.add('drag-over'); }));
+['dragleave', 'drop'].forEach(evt => folderBtn.addEventListener(evt, (e) => { e.preventDefault(); folderBtn.classList.remove('drag-over'); }));
+folderBtn.addEventListener('drop', async (e) => {
+    const files = await collectFilesFromDataTransfer(e.dataTransfer);
+    handleIncomingFiles(files);
+});
+
+// 【核心修复】加入处理中的状态提示，解决苹果相册点击加载时的假死焦虑
+fileInput.addEventListener('change', (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    // 给系统留出绘制时间展示加载中状态，缓解大量图片带来的系统阻塞
+    folderStatus.innerHTML = `<span style="color:var(--accent)"><i class="icon-inline">${svgIcon('stopwatch')}</i> iOS 正在转换格式与加载，请稍候...</span>`;
+    startBtn.disabled = true;
+    
+    setTimeout(() => {
+        handleIncomingFiles(files);
+    }, 150);
+});
+
+function handleIncomingFiles(fileList) {
+    const files = Array.from(fileList);
+    const IMG_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/i;
+    const filtered = files.filter(file => file.type.startsWith('image/') || IMG_EXT_RE.test(file.name));
+    const inPlayScreen = !playScreen.classList.contains('hidden-ui');
+
+    if (filtered.length === 0) {
+        if (inPlayScreen) toast('未能在该文件夹中找到图片', { icon: 'triangle-exclamation' });
+        else { folderStatus.innerHTML = `<span style="color:var(--danger)"><i class="icon-inline">${svgIcon('triangle-exclamation')}</i> 未能在该文件夹中找到图片</span>`; startBtn.disabled = true; }
+        return;
+    }
+
+    images = filtered; playedHistory = [];
+    if (!inPlayScreen) {
+        folderStatus.innerHTML = `<span style="color:var(--rest)"><i class="icon-inline">${svgIcon('check')}</i> 已成功加载 ${images.length} 张图片</span>`;
+        startBtn.disabled = false; return;
+    }
+
+    currentIndex = 0; toast(`已加载 ${images.length} 张图片,已重置播放队列`);
+    if (isShuffle) initShuffleBag();
+    if (currentMode === 'custom') startStructuredSession(); else loadCurrentImage();
+}
+
+function renderPracticeTimeButtons() {
+    return `
+        <div style="width:100%; text-align:center;">
+            <p style="color:var(--text-muted); font-size:12px; margin-bottom:12px;">所有图片使用固定的展示时间。</p>
+            <div class="time-btn-container" id="time-btns">
+                <div class="time-btn ${practiceTime==30?'active':''}" data-time="30">30秒</div>
+                <div class="time-btn ${practiceTime==45?'active':''}" data-time="45">45秒</div>
+                <div class="time-btn ${practiceTime==60?'active':''}" data-time="60">1分钟</div>
+                <div class="time-btn ${practiceTime==120?'active':''}" data-time="120">2分钟</div>
+                <div class="time-btn ${practiceTime==300?'active':''}" data-time="300">5分钟</div>
+                <div class="time-btn ${practiceTime==600?'active':''}" data-time="600">10分钟</div>
+            </div>
+        </div>`;
+}
+
+function renderTabContent() {
+    let html = '';
+    if (currentMode === 'practice') html = renderPracticeTimeButtons();
+    else if (currentMode === 'class') html = `<div style="text-align:center;"><p style="color:var(--text-muted); font-size:12px; line-height:1.6; margin:0;">热身模式<br>强制锁定为每张图片 ${CLASS_FIXED_SECONDS} 秒,快速进入状态。</p></div>`;
+    else if (currentMode === 'relaxed') html = `<div style="text-align:center;"><p style="color:var(--text-muted); font-size:12px; margin:0;">无倒计时。<br>由你决定何时切换下一张图片。</p></div>`;
+    else if (currentMode === 'custom') html = `<div style="text-align:center;"><p style="color:var(--text-muted); font-size:12px; margin-bottom:12px; margin-top:0;">自由设定规则,编排你的专属训练计划。</p><button onclick="openCustomModal()" class="btn-primary footer-btn" style="border-radius:8px">编辑训练计划</button></div>`;
+    tabContent.innerHTML = html;
+
+    if (currentMode === 'practice') {
+        document.querySelectorAll('.time-btn[data-time]').forEach(tBtn => {
+            tBtn.addEventListener('click', (e) => {
+                document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                practiceTime = parseInt(e.currentTarget.dataset.time);
+            });
+        });
+    }
+}
+renderTabContent();
+
+function applyModeColor() {
+    const vars = { practice: '--accent', class: '--mode-class', relaxed: '--mode-relaxed', custom: '--mode-custom' };
+    document.documentElement.style.setProperty('--mode-color', `var(${vars[currentMode]})`);
+}
+applyModeColor();
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode = btn.dataset.tab;
+        renderTabContent(); applyModeColor();
+    });
+});
+
+startBtn.addEventListener('click', () => {
+    if (images.length === 0) return;
+    if (currentMode === 'custom' && buildQueue(customRows).length === 0) { toast('请先编辑训练计划', { icon: 'triangle-exclamation' }); return; }
+    
+    setupScreen.classList.add('hidden-ui');
+    playScreen.classList.remove('hidden-ui');
+    playScreen.classList.add('screen-fade');
+    currentIndex = 0; isPaused = false; playedHistory = [];
+    
+    if (isShuffle) initShuffleBag();
+    btnPause.innerHTML = `<i class="icon-inline">${svgIcon('pause')}</i>`;
+    pokeToolbar(); // 开始时提示一下工具栏位置
+    maybeShowTouchOnboarding();
+    
+    if (currentMode === 'custom') startStructuredSession(); else loadCurrentImage();
+});
+
+function initShuffleBag() {
+    unplayedIndices = [];
+    for (let i = 0; i < images.length; i++) {
+        if (i !== currentIndex) unplayedIndices.push(i);
+    }
+    for (let i = unplayedIndices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [unplayedIndices[i], unplayedIndices[j]] = [unplayedIndices[j], unplayedIndices[i]];
+    }
+}
+
+function pickNextIndex() {
+    if (images.length <= 1) return 0;
+    playedHistory.push(currentIndex);
+    if (!isShuffle) return (currentIndex + 1) % images.length;
+    
+    if (unplayedIndices.length === 0) {
+        for (let i = 0; i < images.length; i++) unplayedIndices.push(i);
+        for (let i = unplayedIndices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [unplayedIndices[i], unplayedIndices[j]] = [unplayedIndices[j], unplayedIndices[i]];
+        }
+    }
+    return unplayedIndices.pop();
+}
+
+function pickPrevIndex() {
+    if (images.length <= 1) return 0;
+    if (playedHistory.length > 0) {
+        let prev = playedHistory.pop();
+        if (isShuffle) {
+            unplayedIndices.push(currentIndex);
+            for (let i = unplayedIndices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [unplayedIndices[i], unplayedIndices[j]] = [unplayedIndices[j], unplayedIndices[i]];
+            }
+        }
+        return prev;
+    }
+    return (currentIndex - 1 + images.length) % images.length;
+}
+
+let customRowsBackup = null;
+function openCustomModal() {
+    if (customRows.length === 0) customRows = [{ count: 1, seconds: 30, isRest: false }];
+    customRowsBackup = JSON.parse(JSON.stringify(customRows));
+    selectedRowIndex = Math.min(selectedRowIndex, customRows.length - 1);
+    document.getElementById('custom-modal-overlay').classList.remove('hidden-ui');
+    renderRowList(); renderRowFields();
+}
+function closeCustomModal(commit) {
+    closeAllPopovers();
+    if (!commit && customRowsBackup) customRows = customRowsBackup;
+    customRowsBackup = null;
+    document.getElementById('custom-modal-overlay').classList.add('hidden-ui');
+    renderTabContent();
+}
+function rowSummary(row) {
+    const t = formatDurationShort(row.seconds);
+    return row.isRest ? `<i class="icon-inline mr-1.5" style="margin-right:6px">${svgIcon('mug-hot')}</i>休息 ${t}`
+                      : `<i class="icon-inline mr-1.5" style="margin-right:6px">${svgIcon('paintbrush')}</i>${row.count} 张图,每张 ${t}`;
+}
+function renderRowList() {
+    const list = document.getElementById('row-list');
+    list.innerHTML = customRows.map((row, i) => `
+        <div class="row-item ${i === selectedRowIndex ? 'selected' : ''} ${row.isRest ? 'is-rest' : ''} ${i === justAddedIndex ? 'just-added' : ''}" data-i="${i}">
+            <span class="row-step-badge">${i + 1}</span>
+            <span class="row-item-text">${rowSummary(row)}</span>
+        </div>`).join('');
+    justAddedIndex = null;
+    list.querySelectorAll('.row-item').forEach(el => el.addEventListener('click', () => { selectedRowIndex = parseInt(el.dataset.i); renderRowList(); renderRowFields(); }));
+    document.getElementById('btn-remove-row').disabled = customRows.length <= 1;
+    document.getElementById('btn-row-up').disabled = selectedRowIndex === 0;
+    document.getElementById('btn-row-down').disabled = selectedRowIndex === customRows.length - 1;
+    updateTotalDurationDisplay();
+}
+function renderRowFields() {
+    const row = customRows[selectedRowIndex]; if (!row) return;
+    const countInput = document.getElementById('input-count');
+    countInput.disabled = row.isRest;
+    document.getElementById('row-count-field').style.opacity = row.isRest ? '0.4' : '1';
+    document.getElementById('row-time-label').textContent = row.isRest ? '休息时长' : '每张图时间';
+    countInput.value = row.isRest ? 1 : row.count;
+    document.getElementById('input-h').value = Math.floor(row.seconds / 3600);
+    document.getElementById('input-m').value = Math.floor((row.seconds % 3600) / 60);
+    document.getElementById('input-s').value = row.seconds % 60;
+    updateRowSubtotalDisplay();
+}
+function onRowFieldChange() {
+    const row = customRows[selectedRowIndex]; if (!row) return;
+    const count = Math.max(1, parseInt(document.getElementById('input-count').value) || 1);
+    const h = Math.max(0, parseInt(document.getElementById('input-h').value) || 0);
+    const m = Math.max(0, parseInt(document.getElementById('input-m').value) || 0);
+    const s = Math.max(0, parseInt(document.getElementById('input-s').value) || 0);
+    row.count = row.isRest ? 1 : count;
+    row.seconds = Math.max(1, h * 3600 + m * 60 + s);
+    renderRowList(); updateRowSubtotalDisplay();
+}
+function updateRowSubtotalDisplay() {
+    const row = customRows[selectedRowIndex]; if (!row) return;
+    document.getElementById('row-subtotal-display').textContent = `本行小计:${formatDurationShort(row.count * row.seconds)}`;
+}
+function addRow(isRest) { customRows.push({ count: 1, seconds: isRest ? 60 : 30, isRest: !!isRest }); selectedRowIndex = customRows.length - 1; justAddedIndex = selectedRowIndex; renderRowList(); renderRowFields(); }
+function removeRow() { if (customRows.length <= 1) return; customRows.splice(selectedRowIndex, 1); selectedRowIndex = Math.max(0, selectedRowIndex - 1); renderRowList(); renderRowFields(); }
+function moveRow(dir) { const newIndex = selectedRowIndex + dir; if (newIndex < 0 || newIndex >= customRows.length) return; const tmp = customRows[selectedRowIndex]; customRows[selectedRowIndex] = customRows[newIndex]; customRows[newIndex] = tmp; selectedRowIndex = newIndex; renderRowList(); }
+function formatDurationShort(t) { const h = Math.floor(t / 3600); const m = Math.floor((t % 3600) / 60); const s = t % 60; let o = ''; if (h > 0) o += `${h}时`; if (m > 0) o += `${m}分`; if (s > 0 || o === '') o += `${s}秒`; return o; }
+function updateTotalDurationDisplay() { document.getElementById('total-duration-display').textContent = formatDurationShort(customRows.reduce((sum, r) => sum + r.count * r.seconds, 0)); }
+
+const PRESET_KEY = 'flowreference_presets';
+function loadPresets() { try { return JSON.parse(localStorage.getItem(PRESET_KEY)) || {}; } catch (e) { return {}; } }
+function savePresets(obj) { localStorage.setItem(PRESET_KEY, JSON.stringify(obj)); }
+function closeAllPopovers() { document.querySelectorAll('.popover').forEach(p => p.remove()); }
+document.addEventListener('click', (e) => { if (!e.target.closest('.popover') && !e.target.closest('.modal-tool-btn')) closeAllPopovers(); });
+
+function showNamePopover(e, onConfirm) {
+    closeAllPopovers();
+    const pop = document.createElement('div'); pop.className = 'popover';
+    pop.innerHTML = `<input type="text" id="preset-name-input" placeholder="预设名称" maxlength="20" class="field-input popover-input"><div style="display:flex;justify-content:flex-end;gap:6px"><button class="btn-ghost popover-btn" id="preset-name-cancel">取消</button><button class="btn-primary popover-btn" id="preset-name-ok">保存</button></div>`;
+    positionPopover(pop, e); document.body.appendChild(pop);
+    const input = pop.querySelector('#preset-name-input'); input.focus();
+    const confirm = () => { const val = input.value.trim(); if (!val) { input.focus(); return; } onConfirm(val); pop.remove(); };
+    pop.querySelector('#preset-name-ok').addEventListener('click', confirm);
+    pop.querySelector('#preset-name-cancel').addEventListener('click', () => pop.remove());
+    input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') confirm(); });
+    input.addEventListener('click', ev => ev.stopPropagation());
+}
+function positionPopover(pop, e) {
+    pop.style.position = 'absolute'; const rect = e.currentTarget.getBoundingClientRect();
+    pop.style.left = (rect.left + window.scrollX) + 'px'; pop.style.top = (rect.top + window.scrollY - 8) + 'px'; pop.style.transform = 'translateY(-100%)';
+}
+function openSavePresetPrompt(e) {
+    e.stopPropagation();
+    showNamePopover(e, (name) => {
+        const p = loadPresets(); p[name] = JSON.parse(JSON.stringify(customRows)); savePresets(p); toast(`已保存预设「${name}」`);
+    });
+}
+function openLoadPresetPopover(e) {
+    e.stopPropagation(); closeAllPopovers();
+    const p = loadPresets(); const names = Object.keys(p);
+    const pop = document.createElement('div'); pop.className = 'popover';
+    if (names.length === 0) pop.innerHTML = `<div class="popover-item" style="color:var(--text-faint);cursor:default">暂无已保存的预设</div>`;
+    else pop.innerHTML = names.map(name => `<div class="popover-item" data-name="${name}"><span>${name}</span><i class="icon-inline del-x" data-del="${name}">${svgIcon('xmark')}</i></div>`).join('');
+    positionPopover(pop, e); document.body.appendChild(pop);
+    pop.querySelectorAll('.popover-item').forEach(item => {
+        item.addEventListener('click', (ev) => {
+            if (ev.target.classList.contains('del-x')) return;
+            const name = item.dataset.name; customRows = JSON.parse(JSON.stringify(p[name])); selectedRowIndex = 0; renderRowList(); renderRowFields(); toast(`已加载预设「${name}」`); pop.remove();
+        });
+    });
+    pop.querySelectorAll('.del-x').forEach(x => {
+        x.addEventListener('click', (ev) => {
+            ev.stopPropagation(); const name = x.dataset.del; const ps = loadPresets(); delete ps[name]; savePresets(ps); pop.remove(); openLoadPresetPopover(e);
+        });
+    });
+}
+
+function buildQueue(rows) {
+    const q = [];
+    rows.forEach(r => { if (r.isRest) q.push({ type: 'rest', seconds: r.seconds }); else { for (let i = 0; i < r.count; i++) q.push({ type: 'image', seconds: r.seconds }); } });
+    return q;
+}
+function startStructuredSession() { sessionQueue = buildQueue(customRows); queueIndex = 0; stepCounter.classList.remove('hidden-ui'); runQueueStep(); }
+function runQueueStep() {
+    if (queueIndex >= sessionQueue.length) { finishStructuredSession(); return; }
+    const step = sessionQueue[queueIndex]; updateStructuredProgressUI();
+    if (step.type === 'rest') { showRestOverlay(true); beginCountdown(step.seconds, advanceQueue); }
+    else { showRestOverlay(false); loadCurrentImage(() => beginCountdown(step.seconds, advanceQueue)); }
+}
+function advanceQueue() {
+    clearInterval(timerInterval); const finished = sessionQueue[queueIndex]; queueIndex++;
+    if (finished && finished.type === 'image' && images.length > 0) currentIndex = pickNextIndex();
+    runQueueStep();
+}
+function finishStructuredSession() {
+    showRestOverlay(false); stepCounter.classList.add('hidden-ui'); progressTrack.style.width = '0%';
+    exitToMenu(); toast('训练完成,辛苦了!', { icon: 'champagne-glasses' });
+}
+function updateStructuredProgressUI() {
+    stepCounter.textContent = `第 ${queueIndex + 1} / ${sessionQueue.length} 步`;
+    const total = sessionQueue.reduce((s, st) => s + st.seconds, 0); const elapsed = sessionQueue.slice(0, queueIndex).reduce((s, st) => s + st.seconds, 0);
+    progressTrack.style.width = `${total > 0 ? (elapsed / total) * 100 : 0}%`;
+}
+function showRestOverlay(on) {
+    restOverlay.classList.toggle('hidden-ui', !on); canvasImg.classList.toggle('is-resting', on); timerBadge.classList.toggle('is-rest', on);
+}
+
+function beginCountdown(totalSeconds, onComplete) {
+    clearInterval(timerInterval); timeRemaining = totalSeconds; updateCountdownDisplay(totalSeconds);
+    if (showTimer) { timerBadge.classList.remove('hidden-ui'); } else { timerBadge.classList.add('hidden-ui'); }
+    timerInterval = setInterval(() => {
+        if (isPaused) return;
+        timeRemaining--; updateCountdownDisplay(totalSeconds);
+        if (timeRemaining <= 0) { clearInterval(timerInterval); playBeepSound(true); onComplete && onComplete(); }
+    }, 1000);
+}
+
+function updateCountdownDisplay(total) {
+    const clamped = Math.max(0, timeRemaining);
+    const isDangerTime = (clamped <= 5 && clamped > 0 && currentMode !== 'relaxed');
+    timerBadge.classList.toggle('is-danger', isDangerTime);
+    if (isDangerTime) playBeepSound(false);
+
+    if (clamped >= 60) {
+        const m = Math.floor(clamped / 60).toString().padStart(2, '0'); const s = (clamped % 60).toString().padStart(2, '0'); timerDisplay.textContent = `${m}:${s}`;
+    } else { timerDisplay.textContent = clamped; }
+    const frac = total > 0 ? clamped / total : 0;
+    timerRingFg.setAttribute('stroke-dashoffset', (RING_CIRCUMFERENCE * (1 - frac)).toFixed(1));
+}
+
+function loadCurrentImage(afterLoad, skipAttempts) {
+    if (images.length === 0) { exitToMenu(); return; }
+    skipAttempts = skipAttempts || 0;
+    const file = images[currentIndex]; const objectURL = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function () {
+        resetZoomState();
+        canvasImg.src = objectURL;
+        document.getElementById('info-name').innerText = file.name;
+        document.getElementById('info-details').innerText = `${this.width}x${this.height} px / ${(file.size / 1024).toFixed(0)} KB`;
+        updateVisuals();
+        if (currentMode !== 'custom') { stepCounter.classList.remove('hidden-ui'); stepCounter.textContent = `第 ${currentIndex + 1} / ${images.length} 张`; }
+        if (afterLoad) afterLoad(); else startTimerLogic();
+    };
+    img.onerror = function () {
+        URL.revokeObjectURL(objectURL);
+        toast(`「${file.name}」格式无法显示,已跳过`, { icon: 'triangle-exclamation' });
+        images.splice(currentIndex, 1);
+        if (images.length === 0) { toast('所有图片都无法加载,请检查图片格式', { icon: 'triangle-exclamation' }); exitToMenu(); return; }
+        if (skipAttempts >= images.length) { toast('图片均无法加载,请检查文件格式', { icon: 'triangle-exclamation' }); exitToMenu(); return; }
+        if (currentIndex >= images.length) currentIndex = 0;
+        loadCurrentImage(afterLoad, skipAttempts + 1);
+    };
+    img.src = objectURL;
+}
+
+function startTimerLogic() {
+    clearInterval(timerInterval); timerBadge.classList.remove('is-danger');
+    if (currentMode === 'relaxed') {
+        timeRemaining = 0; timerDisplay.textContent = '00:00'; timerRingFg.setAttribute('stroke-dashoffset', '0');
+        if (showTimer) timerBadge.classList.remove('hidden-ui'); else timerBadge.classList.add('hidden-ui');
+        timerInterval = setInterval(() => {
+            if (isPaused) return; timeRemaining++;
+            const m = Math.floor(timeRemaining / 60).toString().padStart(2, '0'); const s = (timeRemaining % 60).toString().padStart(2, '0'); timerDisplay.textContent = `${m}:${s}`;
+        }, 1000);
+    } else {
+        const seconds = currentMode === 'class' ? CLASS_FIXED_SECONDS : practiceTime;
+        beginCountdown(seconds, () => { currentIndex = pickNextIndex(); loadCurrentImage(); });
+    }
+}
+
+function nextImg() {
+    if (images.length === 0) return; pokeToolbar();
+    if (currentMode === 'custom') advanceQueue(); else { currentIndex = pickNextIndex(); loadCurrentImage(); }
+}
+function prevImg() {
+    if (images.length === 0) return; pokeToolbar();
+    if (currentMode === 'custom') {
+        if (queueIndex > 0) { clearInterval(timerInterval); queueIndex--; if (sessionQueue[queueIndex].type === 'image' && images.length > 0) currentIndex = pickPrevIndex(); runQueueStep(); }
+    } else { currentIndex = pickPrevIndex(); loadCurrentImage(); }
+}
+function togglePause() {
+    isPaused = !isPaused;
+    btnPause.innerHTML = isPaused ? `<i class="icon-inline">${svgIcon('play')}</i>` : `<i class="icon-inline">${svgIcon('pause')}</i>`;
+    if (isPaused) { toolbarPinned = true; playScreen.classList.add('toolbar-pinned'); clearTimeout(pinTimeout); }
+    else pokeToolbar();
+}
+function deleteImg() {
+    if (images.length === 0) return; images.splice(currentIndex, 1);
+    if (images.length === 0) { exitToMenu(); return; }
+    if (currentIndex >= images.length) currentIndex = 0;
+    if (isShuffle) initShuffleBag();
+    if (currentMode === 'custom') { const step = sessionQueue[queueIndex]; if (step && step.type === 'image') loadCurrentImage(() => {}); }
+    else loadCurrentImage();
+}
+function exitToMenu() {
+    resetZoomState();
+    clearInterval(timerInterval); timerBadge.classList.remove('is-danger'); showRestOverlay(false);
+    stepCounter.classList.add('hidden-ui'); progressTrack.style.width = '0%';
+    playScreen.classList.add('hidden-ui'); setupScreen.classList.remove('hidden-ui'); setupScreen.classList.add('screen-fade');
+    if (images.length === 0) { folderStatus.innerHTML = ''; startBtn.disabled = true; }
+}
+
+function updateVisuals() {
+    applyImgTransform();
+    canvasImg.style.filter = isBW ? 'grayscale(100%) contrast(120%)' : 'none';
+}
+function toggleFlip() { isFlipped = !isFlipped; updateVisuals(); }
+function toggleBW() { isBW = !isBW; document.getElementById('btn-bw').classList.toggle('active', isBW); updateVisuals(); }
+function toggleInfo() { showInfo = !showInfo; topInfo.classList.toggle('hidden-ui', !showInfo); document.getElementById('btn-info').classList.toggle('active', showInfo); }
+function toggleGrid() { isGrid = !isGrid; document.getElementById('grid-overlay').classList.toggle('hidden-ui', !isGrid); document.getElementById('btn-grid').classList.toggle('active', isGrid); }
+function toggleTimerVis() { showTimer = !showTimer; timerBadge.classList.toggle('hidden-ui', !showTimer); document.getElementById('btn-timer').classList.toggle('active', showTimer); }
+function toggleSound() { soundEnabled = !soundEnabled; const btn = document.getElementById('btn-sound'); btn.classList.toggle('active', soundEnabled); btn.innerHTML = svgIcon(soundEnabled ? 'volume-high' : 'volume-xmark'); }
+function toggleShuffle() { isShuffle = !isShuffle; playedHistory = []; if (isShuffle) initShuffleBag(); document.getElementById('btn-shuffle').classList.toggle('active', isShuffle); }
+
+document.addEventListener('keydown', (e) => {
+    if (playScreen.classList.contains('hidden-ui')) return;
+    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+    if (e.code === 'Space') { e.preventDefault(); togglePause(); }
+    if (e.code === 'ArrowRight') nextImg();
+    if (e.code === 'ArrowLeft') prevImg();
+    if (e.code === 'Escape') exitToMenu();
+    if (e.key === 'g' || e.key === 'G') toggleGrid();
+    if (e.key === 'f' || e.key === 'F') toggleFlip();
+    if (e.key === 'b' || e.key === 'B') toggleBW();
+    if (e.key === 'i' || e.key === 'I') toggleInfo();
+    if (e.key === 't' || e.key === 'T') toggleTimerVis();
+    if (e.key === 's' || e.key === 'S') toggleShuffle();
+    if (e.key === 'm' || e.key === 'M') toggleSound();
+});
+</script>
+</body>
+</html>
