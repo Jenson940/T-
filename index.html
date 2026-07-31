@@ -10,9 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="T门动态速写">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
 <style>
-    /* 核心颜色变量 */
     :root{
         --bg-canvas:#EBE5F5;
         --bg-panel:#FFFFFF;
@@ -41,20 +40,18 @@
         --danger-soft:#F6E3E0;
     }
     
-    /* 基础重置 (摆脱外部依赖) */
     *{ box-sizing:border-box; margin:0; padding:0; }
     html, body{
         height: 100%; width: 100%;
         background:var(--bg-canvas);
         color:var(--text);
-        font-family:'Inter',sans-serif;
+        font-family:'Inter',system-ui,sans-serif;
         overflow:hidden;
         -webkit-tap-highlight-color: transparent;
     }
     .font-mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
     .font-round{font-family:'Fraunces',ui-serif,'Inter',sans-serif; font-optical-sizing:auto;}
     
-    /* 图标统一样式 */
     i[data-icon], i.icon-inline{ display:inline-flex; width:1em; height:1em; align-items:center; justify-content:center; }
     i[data-icon] svg, i.icon-inline svg{ width:1em; height:1em; display:block; flex-shrink:0; vertical-align:middle; }
     .hidden-ui{display:none !important;}
@@ -64,110 +61,148 @@
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
     ::-webkit-scrollbar-thumb:hover{background:var(--text-faint);}
 
-    /* ================= 设置主屏幕 ================= */
+    @keyframes ambient-breathe {
+        0% { transform: scale(1) translate(0, 0); opacity: 0.6; }
+        33% { transform: scale(1.08) translate(3%, 4%); opacity: 0.8; }
+        66% { transform: scale(0.95) translate(-2%, -2%); opacity: 0.5; }
+        100% { transform: scale(1) translate(0, 0); opacity: 0.6; }
+    }
+
     #setup-screen{
         position: fixed; inset: 0;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: #F4F2F7;
+        overflow: hidden;
+    }
+    
+    #setup-screen::before {
+        content: ""; position: absolute; inset: -30%; z-index: 0; pointer-events: none;
         background:
-            radial-gradient(ellipse 800px 480px at 12% -8%, rgba(157,117,230,.22), transparent 60%),
-            radial-gradient(ellipse 700px 420px at 105% 10%, rgba(210,162,114,.16), transparent 60%),
-            radial-gradient(ellipse 700px 460px at 0% 105%, rgba(187,140,166,.14), transparent 55%),
-            var(--bg-canvas);
+            radial-gradient(circle at 20% 0%, rgba(157,117,230,.25) 0%, transparent 60%),
+            radial-gradient(circle at 90% 20%, rgba(210,162,114,.2) 0%, transparent 50%),
+            radial-gradient(circle at 10% 100%, rgba(187,140,166,.15) 0%, transparent 50%);
+        animation: ambient-breathe 24s ease-in-out infinite alternate;
     }
+
     .setup-card{
-        background:var(--bg-panel);
-        border:1px solid var(--border-soft);
-        border-radius:28px;
-        box-shadow:0 30px 60px -25px rgba(45,37,58,.22), 0 2px 8px rgba(45,37,58,.04);
-        width: 540px; max-width: 92%;
-        padding: 36px 40px;
-        display: flex; flex-direction: column; align-items: center;
+        position: relative; z-index: 1;
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+        border: 1px solid rgba(255,255,255,0.8);
+        border-radius: 40px;
+        box-shadow: 0 40px 80px -20px rgba(30, 20, 50, 0.12), inset 0 0 0 1px rgba(255,255,255,0.5);
+        width: 620px; max-width: 92%;
+        padding: 56px 64px;
+        display: flex; flex-direction: column;
+        transform: translateY(0); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
     }
-    .setup-title { font-size: 30px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.025em; }
-    .setup-title .highlight { font-weight: 700; color: var(--accent-hover); }
-    .setup-subtitle { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 28px; letter-spacing: 0.025em; }
+    
+    .setup-header { text-align: left; margin-bottom: 32px; }
+    .setup-title { 
+        font-size: 38px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.04em; 
+        color: #1E1B24;
+    }
+    .setup-title .highlight { 
+        background: linear-gradient(135deg, #9D75E6 0%, #7442C2 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .setup-subtitle { font-size: 14px; color: #71697F; font-weight: 500; letter-spacing: 0.02em; }
 
-    /* 文件选择器 */
     .folder-drop{
-        width: 100%; padding: 16px 0; text-align: center; cursor: pointer;
-        font-size: 15px; font-weight: 600;
-        border:1.5px solid transparent; border-radius:18px;
-        background:rgba(157,117,230,.12);
-        transition:background .2s ease, border-color .2s ease, transform .15s ease, box-shadow .2s ease;
+        width: 100%; padding: 28px 0; text-align: center; cursor: pointer;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+        background: rgba(255,255,255,0.5);
+        border: 2px dashed rgba(157,117,230, 0.3); border-radius: 24px;
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    .folder-drop:hover{ background:var(--bg-panel); border-color:var(--accent); box-shadow:0 8px 20px -12px rgba(157,117,230,.5); transform:translateY(-1px); }
-    .folder-drop:hover .folder-drop-icon{ color:var(--accent); }
-    .folder-drop:active{ transform:scale(.985); }
-    .folder-drop-icon { margin-right: 8px; color: var(--accent-hover); }
+    .folder-drop:hover{ 
+        background: #FFFFFF; border-color: var(--accent); border-style: solid;
+        box-shadow: 0 16px 32px -12px rgba(157,117,230, 0.25); transform: translateY(-2px); 
+    }
+    .folder-drop:active{ transform: scale(0.98); }
+    .folder-drop-icon { font-size: 32px; color: #AFA6C0; transition: color 0.3s; }
+    .folder-drop:hover .folder-drop-icon { color: var(--accent); }
+    #folder-btn-label { font-size: 16px; font-weight: 700; color: #4A4258; }
+    
     #file-input { display: none !important; } 
-    #folder-status { font-size: 12px; color: var(--text-muted); margin-top: 8px; height: 16px; }
+    #folder-status { font-size: 13px; font-weight: 600; color: #71697F; margin-top: 12px; text-align: center; height: 18px; }
 
-    /* 模式面板 */
-    .mode-section { width: 100%; border-top: 1px solid var(--border-soft); padding-top: 24px; margin-top: 20px; }
-    .mode-title { text-align: center; color: var(--text-muted); font-size: 12px; margin-bottom: 12px; font-weight: 600; letter-spacing: 0.05em; }
-    .mode-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom: 20px; }
+    .mode-section { width: 100%; margin-top: 32px; }
+    .mode-title { text-align: left; color: #1E1B24; font-size: 15px; margin-bottom: 16px; font-weight: 800; letter-spacing: 0.02em; }
+    .mode-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom: 24px; }
     
     .tab-btn{
-        padding:16px 10px; display:flex; flex-direction:column; align-items:flex-start; gap:14px;
-        cursor:pointer; color:var(--text-muted); background:var(--bg-panel-alt);
-        border-radius:18px; transition:background .18s ease, color .18s ease, transform .15s ease, box-shadow .18s ease, border-color .18s ease;
-        position:relative; border:1.5px solid transparent; overflow:hidden;
+        padding: 16px 20px; display:flex; flex-direction:row; align-items:center; gap:14px;
+        cursor:pointer; background: rgba(255,255,255,0.5);
+        border-radius: 20px; transition:all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        border: none; color: #71697F; box-shadow: 0 2px 8px rgba(0,0,0,0.02);
     }
-    .tab-btn:hover{ transform:translateY(-2px); border-color:var(--border); box-shadow:0 10px 22px -14px rgba(45,37,58,.25); }
-    .tab-btn .tab-icon{
-        width:34px; height:34px; border-radius:11px; display:flex; align-items:center; justify-content:center;
-        background:rgba(255,255,255,.7); font-size:16px; transition:background .18s ease, transform .18s ease;
-    }
-    .tab-btn:hover .tab-icon{ transform:scale(1.06); }
-    .tab-btn[data-tab="practice"].active{ background:var(--accent); color:var(--accent-ink); box-shadow:0 12px 24px -14px rgba(157,117,230,.7); }
-    .tab-btn[data-tab="class"].active{ background:var(--mode-class); color:var(--accent-ink); box-shadow:0 12px 24px -14px rgba(210,162,114,.7); }
-    .tab-btn[data-tab="relaxed"].active{ background:var(--mode-relaxed); color:var(--accent-ink); box-shadow:0 12px 24px -14px rgba(143,170,192,.7); }
-    .tab-btn[data-tab="custom"].active{ background:var(--mode-custom); color:var(--accent-ink); box-shadow:0 12px 24px -14px rgba(187,140,166,.7); }
-    .tab-btn.active{ transform:translateY(-1px); }
-    .tab-btn.active .tab-icon{ background:rgba(255,255,255,.25); }
-    .tab-btn span{ font-size:13.5px; font-weight:600; }
-
-    .tab-content-container { min-height: 92px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .tab-btn:hover:not(.active){ transform:translateY(-2px); background:#fff; box-shadow:0 12px 24px -12px rgba(30,20,50,.15); }
     
-    .time-btn-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; width: 100%; }
-    .time-btn{
-        background:var(--bg-panel-alt); color:var(--text-muted); border:1.5px solid var(--border-soft);
-        padding:9px 14px; cursor:pointer; font-size:13.5px; border-radius:99px; transition:all .15s ease; font-weight:500;
+    .tab-btn .tab-icon{
+        width: 40px; height: 40px; border-radius: 12px; display:flex; align-items:center; justify-content:center;
+        background: #FFFFFF; font-size:18px; transition:all .3s ease;
+        box-shadow: 0 4px 10px -4px rgba(0,0,0,0.1); color: #9A8EB0;
     }
-    .time-btn:hover:not(.active):not(.is-disabled){ background:var(--bg-panel-hover); color:var(--text); border-color:var(--border); transform:translateY(-1px); }
-    .time-btn.active{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:700; box-shadow:0 8px 16px -10px rgba(157,117,230,.7); }
-    .time-btn:active:not(.is-disabled){ transform:scale(.96); }
+    .tab-btn:hover:not(.active) .tab-icon{ transform:scale(1.08); color: var(--accent); }
+    
+    .tab-btn[data-tab="practice"].active{ background: linear-gradient(135deg, #F5EFFF, #E8D9FA); color: #583396; box-shadow: 0 12px 24px -8px rgba(138,88,216,.3); }
+    .tab-btn[data-tab="practice"].active .tab-icon{ background: #8A58D8; color: #fff; box-shadow: none;}
 
-    /* 通用按钮 */
+    .tab-btn[data-tab="class"].active{ background: linear-gradient(135deg, #FFF5EB, #FCE3CA); color: #965B21; box-shadow: 0 12px 24px -8px rgba(210,162,114,.3); }
+    .tab-btn[data-tab="class"].active .tab-icon{ background: #D2A272; color: #fff; box-shadow: none;}
+
+    .tab-btn[data-tab="relaxed"].active{ background: linear-gradient(135deg, #EFF6FB, #D7E8F5); color: #2B577A; box-shadow: 0 12px 24px -8px rgba(143,170,192,.3); }
+    .tab-btn[data-tab="relaxed"].active .tab-icon{ background: #8FAAC0; color: #fff; box-shadow: none;}
+
+    .tab-btn[data-tab="custom"].active{ background: linear-gradient(135deg, #FCF3F7, #F5D9E7); color: #8F3B66; box-shadow: 0 12px 24px -8px rgba(187,140,166,.3); }
+    .tab-btn[data-tab="custom"].active .tab-icon{ background: #BB8CA6; color: #fff; box-shadow: none;}
+    
+    .tab-btn.active{ transform:translateY(-2px); font-weight: 700; }
+    .tab-btn span{ font-size:15px; font-weight:700; letter-spacing: 0.02em; }
+
+    .tab-content-container { min-height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; width: 100%; }
+    
+    .time-btn-container { display: flex; justify-content: flex-start; flex-wrap: wrap; gap: 10px; width: 100%; }
+    .time-btn{
+        background: rgba(255,255,255,0.6); color: #71697F; border: none;
+        padding: 10px 18px; cursor: pointer; font-size: 14px; border-radius: 14px; transition:all .25s ease; font-weight:600;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+    .time-btn:hover:not(.active):not(.is-disabled){ background: #FFFFFF; color: #1E1B24; transform:translateY(-2px); box-shadow: 0 8px 16px -8px rgba(0,0,0,0.1); }
+    .time-btn.active{ background: #1C1427; color: #FFFFFF; box-shadow: 0 12px 20px -8px rgba(28,20,39,.6); }
+    .time-btn:active:not(.is-disabled){ transform:scale(.95); }
+
     .btn-primary{
-        background:var(--ink); color:#fff; font-weight:600; border:none; outline:none;
-        transition:background .18s ease, transform .12s ease, box-shadow .18s ease;
-        box-shadow:0 10px 26px -10px rgba(45,37,58,.35);
-        position:relative; overflow:hidden; cursor:pointer;
+        background: #1C1427;
+        color: #fff; font-weight: 700; border: none; outline: none; font-size: 17px;
+        transition: all .3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        box-shadow: 0 16px 32px -12px rgba(28,20,39,.6);
+        position: relative; overflow: hidden; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
     }
     .btn-primary::after{
         content:""; position:absolute; inset:0; opacity:0;
-        background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,.14) 50%, transparent 70%);
-        transform:translateX(-100%); transition:opacity .2s ease;
+        background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,.15) 50%, transparent 70%);
+        transform:translateX(-100%); transition:opacity .3s ease;
     }
-    .btn-primary:hover::after{ opacity:1; animation:btnSheen 1.1s ease; }
-    @keyframes btnSheen{ from{ transform:translateX(-100%); } to{ transform:translateX(100%); } }
-    .btn-primary:hover{ background:#423753; box-shadow:0 14px 30px -10px rgba(45,37,58,.45); }
-    .btn-primary:active{ transform:scale(.98); }
-    .btn-primary:disabled{ background:var(--bg-panel-alt); color:var(--text-faint); box-shadow:none; cursor:not-allowed; }
+    .btn-primary:hover::after{ opacity:1; animation:btnSheen 1.2s ease infinite; }
+    @keyframes btnSheen{ 0%{ transform:translateX(-100%); } 100%{ transform:translateX(100%); } }
+    .btn-primary:hover{ transform:translateY(-2px); box-shadow:0 20px 40px -12px rgba(28,20,39,.7); background: #2D253A; }
+    .btn-primary:active{ transform:scale(.97); box-shadow:0 8px 16px -8px rgba(28,20,39,.6); }
+    .btn-primary:disabled{ background: rgba(28,20,39,0.05); color: #AFA6C0; box-shadow: none; cursor: not-allowed; transform: none; }
     .btn-primary:disabled::after{ display:none; }
     
-    .start-btn { width: 100%; padding: 14px 0; font-size: 15px; border-radius: 99px; margin-top: 8px; letter-spacing: 0.025em; }
+    .start-btn { width: 100%; padding: 22px 0; border-radius: 24px; margin-top: 12px; letter-spacing: 0.04em; }
 
     .btn-ghost{
-        background:var(--bg-panel-alt); color:var(--text); border:1px solid var(--border-soft);
-        transition:all .15s ease; border-radius: 8px; cursor: pointer; outline: none;
+        background: #F4F2F7; color: #4A4258; border: none;
+        transition:all .2s ease; border-radius: 12px; cursor: pointer; outline: none; font-weight: 600;
     }
-    .btn-ghost:hover{ background:var(--bg-panel-hover); border-color:var(--border); transform:translateY(-1px); }
+    .btn-ghost:hover{ background: #E9E4F0; color: #1E1B24; transform:translateY(-1px); }
     .btn-ghost:active{ transform:scale(.97); }
-    .footer-btn { padding: 8px 24px; font-size: 14px; }
+    .footer-btn { padding: 12px 28px; font-size: 15px; }
 
-    /* ================= 播放界面 ================= */
     #play-screen{
         position: fixed; inset: 0; background: #18141F; overflow: hidden; z-index: 50;
     }
@@ -175,7 +210,6 @@
         position:absolute; inset:0; pointer-events:none; z-index:1;
         background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.6) 100%);
     }
-    /* 图片完全脱离文档流，绝对定位满屏，靠 object-fit 缩放不影响任何 UI */
     #canvas-img{
         position:absolute; top: 0; left: 0; width: 100%; height: 100%;
         object-fit: contain; 
@@ -183,8 +217,9 @@
         z-index: 2; pointer-events: none;
     }
     #canvas-img.is-resting{ opacity:.15; filter:blur(2px) grayscale(60%); }
+    #canvas-img.is-zoomed{ cursor: grab; transition: transform .15s ease-out; }
+    #canvas-img.is-zoomed.is-dragging{ transition: none; cursor: grabbing; }
 
-    /* 检测点击的透明层 */
     #interaction-layer { position: absolute; inset: 0; z-index: 5; cursor: default; touch-action: none; }
 
     #grid-overlay{
@@ -215,16 +250,30 @@
 
     #timer-badge{
         position:absolute; top:16px; right:16px; z-index:10;
-        width:78px; height:78px; display:flex; align-items:center; justify-content:center;
+        width:90px; height:90px; display:flex; align-items:center; justify-content:center;
     }
     #timer-badge svg{ position:absolute; inset:0; transform:rotate(-90deg); }
     #timer-ring-bg{ stroke:rgba(255,255,255,.12); }
-    #timer-ring-fg{ stroke:var(--mode-color, var(--accent)); transition:stroke-dashoffset 1s linear, stroke .3s ease; stroke-linecap:round; }
+    #timer-ring-fg{ 
+        stroke:var(--mode-color, var(--accent)); transition:stroke-dashoffset 1s linear, stroke .3s ease; 
+        stroke-linecap:round; 
+    }
     #timer-badge.is-rest #timer-ring-fg{ stroke:var(--rest); }
     #timer-badge.is-danger #timer-ring-fg{ stroke:var(--danger) !important; }
     #timer-badge.is-danger #timer-display{ color:var(--danger) !important; animation:pulseWarning .8s ease infinite alternate; }
-    @keyframes pulseWarning{ from{ transform:scale(1); } to{ transform:scale(1.08); } }
-    #timer-display{ font-size:19px; font-weight:600; color:white; z-index:2; letter-spacing:.02em; text-shadow:0 1px 3px rgba(0,0,0,.6); transition:color .3s ease; }
+    @keyframes pulseWarning{ from{ transform:scale(1); } to{ transform:scale(1.15); } }
+    #timer-display{ font-size:22px; font-weight:700; color:white; z-index:2; letter-spacing:.02em; transition:color .3s ease; }
+
+    #btn-add-time {
+        position:absolute; top:116px; right:26px; z-index:10;
+        background:rgba(30,25,38,.65); border:1px solid rgba(255,255,255,.15);
+        color:#fff; padding:6px 14px; border-radius:99px;
+        font-size:13px; font-weight:700; cursor:pointer; letter-spacing:.02em;
+        transition:all .2s ease; box-shadow:0 4px 12px rgba(0,0,0,0.3);
+        backdrop-filter:blur(8px);
+    }
+    #btn-add-time:hover { background:rgba(255,255,255,.2); transform:translateY(-2px); }
+    #btn-add-time:active { transform:scale(.92); }
 
     #rest-overlay{
         position:absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -234,7 +283,6 @@
     #rest-overlay i{ font-size:34px; color:var(--rest); }
     #rest-overlay span{ font-size:15px; letter-spacing:.04em; }
 
-    /* 底部控制栏 */
     .bottom-toolbar{
         position:absolute; bottom:22px; left:50%; z-index:20;
         background:rgba(28,23,36,.92); backdrop-filter:blur(16px);
@@ -244,7 +292,6 @@
         opacity:0; transform:translate(-50%,16px); transition:opacity .25s ease, transform .25s ease;
     }
     
-    /* 【修复 2】排除了触控设备，解决 iPad 笔离开后工具栏不消失的 Bug */
     body:not(.touch-device) #play-screen:hover .bottom-toolbar { opacity:1; transform:translate(-50%,0); }
     #play-screen.toolbar-pinned .bottom-toolbar { opacity:1; transform:translate(-50%,0); }
     
@@ -271,16 +318,22 @@
     .controls-tools{ display:flex; align-items:center; gap:6px; font-size:15px; color:#b0a6c2; }
     .tool-btn{
         width:36px; height:36px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center;
-        font-size:16px; transition:background .15s ease, color .15s ease;
+        font-size:16px; transition:all .2s ease;
         background: none; border: none; cursor: pointer; color: inherit;
     }
     .tool-btn svg{ width:1em; height:1em; display:block; flex-shrink:0; }
     .tool-btn:hover{ background:rgba(255,255,255,.08); color:#fff; }
     .tool-btn:active{ transform:scale(.95); }
-    .tool-btn.active{ background:rgba(157,117,230,.25); color:#d9c9fb; box-shadow:none; }
+    
+    /* 高对比度发光按钮 (选中状态) */
+    .tool-btn.active{ 
+        background:rgba(157,117,230,.35); 
+        color:#FFFFFF; 
+        box-shadow: inset 0 0 0 1px rgba(157,117,230,.5), 0 4px 12px -2px rgba(157,117,230,.4); 
+    }
+    
     .tool-divider{ width:1px; height:18px; background:rgba(255,255,255,.14); margin:0 2px; }
 
-    /* ================= 弹窗与悬浮 ================= */
     #custom-modal-overlay{
         position:fixed; inset:0; background:rgba(18,14,24,.75); backdrop-filter:blur(3px);
         display:flex; justify-content:center; align-items:center; z-index:100;
@@ -386,33 +439,30 @@
     .screen-fade{ animation:screenFadeIn .35s ease; }
     @keyframes screenFadeIn{ from{ opacity:0; } to{ opacity:1; } }
 
-    /* ================= 触控设备 & 安全区适配 (iPad / 手机) ================= */
-    /* 圆角屏、Home 指示条留白，避免控件被系统手势遮挡/误触 */
     .bottom-toolbar{ margin-bottom: env(safe-area-inset-bottom, 0px); }
     #top-info{ margin-top: env(safe-area-inset-top, 0px); }
     #timer-badge{ margin-top: env(safe-area-inset-top, 0px); margin-right: env(safe-area-inset-right, 0px); }
+    #btn-add-time{ margin-top: env(safe-area-inset-top, 0px); margin-right: env(safe-area-inset-right, 0px); }
     #step-counter{ margin-top: env(safe-area-inset-top, 0px); margin-left: env(safe-area-inset-left, 0px); }
     #toast-stack{ margin-bottom: env(safe-area-inset-bottom, 0px); }
 
-    /* 触控设备上放大可点击热区 (Apple HIG 建议 ≥44px)，避免误触 */
     .touch-device .tool-btn{ width:44px; height:44px; }
     .touch-device .ctrl-btn{ width:50px; height:50px; }
     .touch-device .ctrl-btn.big{ width:60px; height:60px; }
     .touch-device .time-btn{ padding:11px 16px; }
 
-    /* 图片查看缩放 (双击放大细看动态/结构) */
-    #canvas-img.is-zoomed{ cursor: grab; transition: transform .15s ease-out; }
-    #canvas-img.is-zoomed.is-dragging{ transition: none; cursor: grabbing; }
-    /* 拖拽文件到设置界面 */
-    .folder-drop.drag-over{ background:var(--bg-panel); border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+    .folder-drop.drag-over{ background:#FFFFFF; border-color:var(--accent); border-style:solid; box-shadow:0 0 0 4px var(--accent-soft); }
 
-    /* 响应式调整 (手机与平板) */
     @media (max-width: 640px) {
-        .setup-card { padding: 24px 20px; }
-        .setup-title { font-size: 24px; }
-        .mode-grid { gap: 8px; }
-        .tab-btn { padding: 12px 8px; gap: 8px; }
-        .tab-btn .tab-icon { width: 28px; height: 28px; font-size: 14px; }
+        .setup-card { padding: 32px 24px; border-radius: 32px; width: 94%; }
+        .setup-header { margin-bottom: 24px; text-align: center; }
+        .setup-title { font-size: 32px; }
+        .mode-title { text-align: center; }
+        .mode-grid { gap: 12px; }
+        .tab-btn { padding: 12px 14px; flex-direction: column; gap: 8px; border-radius: 16px; }
+        .tab-btn .tab-icon { width: 36px; height: 36px; font-size: 16px; }
+        .tab-content-container { align-items: center; }
+        .time-btn-container { justify-content: center; }
         .custom-modal { max-height: 90vh; }
         .custom-modal-flex { flex-direction: column; height: auto !important; max-height: 70vh; overflow-y: auto; }
         .custom-modal-left, .custom-modal-right { width: 100% !important; border-right: none; }
@@ -422,31 +472,32 @@
         .ctrl-btn.big { width: 52px; height: 52px; font-size: 17px; }
         .controls-tools { flex-wrap: wrap; justify-content: center; gap: 4px; }
         .tool-btn { width: 40px; height: 40px; }
-        #timer-badge { width: 56px; height: 56px; top: 10px; right: 10px; }
-        #timer-badge svg { width: 56px; height: 56px; }
-        #timer-display { font-size: 14px; }
+        #timer-badge { width: 64px; height: 64px; top: 12px; right: 12px; }
+        #timer-display { font-size: 16px; }
+        #btn-add-time { top: 88px; right: 16px; padding: 6px 12px; font-size: 12px; }
     }
 </style>
 </head>
 <body>
 
-<!-- 设置界面 -->
 <div id="setup-screen">
     <div class="setup-card screen-fade">
-        <h1 class="font-round setup-title">速写<span class="highlight">训练</span></h1>
-        <p class="setup-subtitle">T门动态速写 &middot; 手绘参考计时工具</p>
+        <div class="setup-header">
+            <h1 class="font-round setup-title">速写<span class="highlight">训练</span></h1>
+            <p class="setup-subtitle">T门动态速写 &middot; 高级手绘参考计时器</p>
+        </div>
 
-        <!-- 文件夹选择区 (桌面支持拖拽文件夹/图片到此处) -->
         <div id="folder-btn" class="folder-drop" onclick="document.getElementById('file-input').click()">
-            <i data-icon="folder-open" class="folder-drop-icon"></i><span id="folder-btn-label">选择素材文件夹</span>
+            <i data-icon="folder-open" class="folder-drop-icon"></i>
+            <span id="folder-btn-label">选择参考图文件夹</span>
+            <span style="font-size: 12px; font-weight: 500; color: #9A8EB0;">支持多选或拖拽导入</span>
         </div>
         <input type="file" id="file-input" webkitdirectory directory multiple accept="image/*">
         <p id="folder-status"></p>
-        <p id="platform-hint" class="hidden-ui" style="font-size:11px; color:var(--text-faint); margin-top:2px; text-align:center; line-height:1.5;"></p>
+        <p id="platform-hint" class="hidden-ui" style="font-size:11.5px; color:#9A8EB0; margin-top:2px; text-align:center; line-height:1.6; font-weight:500;"></p>
 
-        <!-- 模式面板 -->
         <div class="mode-section">
-            <p class="mode-title">训练模式</p>
+            <p class="mode-title">选择训练模式</p>
             <div class="mode-grid">
                 <div class="tab-btn active" data-tab="practice">
                     <span class="tab-icon"><i data-icon="stopwatch"></i></span>
@@ -466,22 +517,19 @@
                 </div>
             </div>
 
-            <!-- 动态内容区 -->
             <div id="tab-content" class="tab-content-container"></div>
         </div>
 
         <button id="start-btn" class="btn-primary start-btn" disabled>
-            开始作画
+            <i data-icon="paintbrush" style="font-size: 18px;"></i> 开始作画
         </button>
     </div>
 </div>
 
-<!-- 自定义模态框 -->
 <div id="custom-modal-overlay" class="hidden-ui">
     <div class="custom-modal">
         <div class="modal-header">自定义训练计划</div>
         <div class="custom-modal-flex">
-            <!-- 左侧列表 -->
             <div class="custom-modal-left">
                 <div id="row-list"></div>
                 <div class="modal-left-toolbar">
@@ -502,7 +550,6 @@
                     </div>
                 </div>
             </div>
-            <!-- 右侧设置 -->
             <div class="custom-modal-right">
                 <p class="right-title">当前行设置</p>
 
@@ -530,12 +577,11 @@
         </div>
         <div class="modal-footer">
             <button class="btn-ghost footer-btn" onclick="closeCustomModal(false)">取消</button>
-            <button class="btn-primary footer-btn" onclick="closeCustomModal(true)">确定</button>
+            <button class="btn-primary footer-btn" style="padding: 10px 28px; border-radius: 12px;" onclick="closeCustomModal(true)">确定</button>
         </div>
     </div>
 </div>
 
-<!-- 播放界面 -->
 <div id="play-screen" class="hidden-ui">
     <div id="progress-track" style="width:0%"></div>
     <div id="play-vignette"></div>
@@ -546,16 +592,18 @@
         <span id="info-details">1920x1080 px / 100 KB</span>
     </div>
 
-    <div id="step-counter" class="hidden-ui"></div>
+    <div id="step-counter" class="hidden-ui font-mono"></div>
 
     <div id="timer-badge">
-        <svg width="78" height="78" viewBox="0 0 78 78">
-            <circle id="timer-ring-bg" cx="39" cy="39" r="34" fill="none" stroke-width="4"></circle>
-            <circle id="timer-ring-fg" cx="39" cy="39" r="34" fill="none" stroke-width="4"
-                    stroke-dasharray="213.6" stroke-dashoffset="0"></circle>
+        <svg width="100%" height="100%" viewBox="0 0 100 100">
+            <circle id="timer-ring-bg" cx="50" cy="50" r="42" fill="none" stroke-width="5"></circle>
+            <circle id="timer-ring-fg" cx="50" cy="50" r="42" fill="none" stroke-width="5"
+                    stroke-dasharray="263.9" stroke-dashoffset="0"></circle>
         </svg>
         <div id="timer-display" class="font-mono">30</div>
     </div>
+    
+    <button id="btn-add-time" class="hidden-ui" onclick="addTime(30)" title="加时 30 秒">+ 30s</button>
 
     <div id="rest-overlay" class="hidden-ui">
         <i data-icon="mug-hot"></i>
@@ -564,12 +612,9 @@
 
     <div id="grid-overlay" class="hidden-ui"></div>
 
-    <!-- 检测 iPad 屏幕点击呼出菜单层 / 滑动切图 / 双击放大 -->
     <div id="interaction-layer"></div>
-    <!-- 渲染的图片 (绝对定位满屏，自适应) -->
     <img id="canvas-img" src="" alt="Reference">
 
-    <!-- 底部控制栏 -->
     <div class="bottom-toolbar">
         <div class="controls-main">
             <button class="ctrl-btn" onclick="prevImg()" title="上一张 (←)"><i data-icon="chevron-left"></i></button>
@@ -597,9 +642,6 @@
 <div id="toast-stack"></div>
 
 <script>
-// ============================================================
-// SVG 图标库
-// ============================================================
 const ICONS = {
     'folder-open': '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H3Z"/><path d="m3 8 1.2 9.4A2 2 0 0 0 6.2 19h11.6a2 2 0 0 0 2-1.6L21 10H3Z"/>',
     'paintbrush': '<path d="M14 4c2 0 4 2 4 4 0 1.2-.5 2-1.3 2.7L9 18.4a2.5 2.5 0 0 1-3.5 0 2.5 2.5 0 0 1 0-3.5L13.3 7.3C14 6.5 14 5.2 14 4Z"/><path d="M5.5 14.5 3 21l6.5-2.5"/>',
@@ -632,20 +674,19 @@ const ICONS = {
     'bookmark': '<path d="M6 3.5A1.5 1.5 0 0 1 7.5 2h9A1.5 1.5 0 0 1 18 3.5V21l-6-4-6 4V3.5Z"/>',
     'list-preset': '<rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8 9h8M8 13h8M8 17h5"/>',
     'volume-high': '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>',
-    'volume-xmark': '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/>'
+    'volume-xmark': '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/>',
+    'spinner': '<path opacity="0.2" d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2C6.5 2 2 6.5 2 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/></path>'
 };
 function svgIcon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`; }
 function initStaticIcons() { document.querySelectorAll('[data-icon]').forEach(el => el.innerHTML = svgIcon(el.dataset.icon)); }
 initStaticIcons();
 
-// ============================================================
-// 状态管理
-// ============================================================
 let images = [];
 let currentIndex = 0;
 let currentMode = 'practice';
 let practiceTime = 30;
 let timeRemaining = 0;
+let currentTotalTime = 0;
 let timerInterval = null;
 let isPaused = false;
 let sessionQueue = [];
@@ -661,10 +702,10 @@ let isGrid = false;
 let isShuffle = false;
 let soundEnabled = true;
 let audioCtx = null;
-let currentObjectURL = null; // 【优化 1】内存防崩溃追踪变量
+let currentObjectURL = null; // 内存泄漏防崩溃修复
 let playedHistory = [];
-let unplayedIndices = []; // 抽奖袋
-const RING_CIRCUMFERENCE = 2 * Math.PI * 34;
+let unplayedIndices = [];
+const RING_CIRCUMFERENCE = 263.9; 
 const CLASS_FIXED_SECONDS = 30;
 let toolbarPinned = false;
 let pinTimeout = null;
@@ -672,7 +713,7 @@ let pinTimeout = null;
 // DOM
 const setupScreen = document.getElementById('setup-screen');
 const playScreen = document.getElementById('play-screen');
-let fileInput = document.getElementById('file-input'); // iPad 文件上传修复
+let fileInput = document.getElementById('file-input'); // 改为 let 解决 iOS 无法多选 Bug
 const startBtn = document.getElementById('start-btn');
 const folderStatus = document.getElementById('folder-status');
 const tabContent = document.getElementById('tab-content');
@@ -690,9 +731,6 @@ const interactionLayer = document.getElementById('interaction-layer');
 
 timerRingFg.setAttribute('stroke-dasharray', RING_CIRCUMFERENCE.toFixed(1));
 
-// ============================================================
-// 音频与提示
-// ============================================================
 function playBeepSound(isEnd = false) {
     if (!soundEnabled) return;
     try {
@@ -703,8 +741,7 @@ function playBeepSound(isEnd = false) {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(isEnd ? 780 : 580, audioCtx.currentTime);
         gain.gain.setValueAtTime(0, audioCtx.currentTime);
-        // 大幅调大音量
-        gain.gain.linearRampToValueAtTime(isEnd ? 0.6 : 0.4, audioCtx.currentTime + 0.03);
+        gain.gain.linearRampToValueAtTime(isEnd ? 0.4 : 0.2, audioCtx.currentTime + 0.03); // 提高音量
         gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + (isEnd ? 0.35 : 0.18));
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + (isEnd ? 0.35 : 0.18));
@@ -716,10 +753,9 @@ function unlockAudioContext() {
     try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
-        // 秘籍：偷偷播放0.01秒的无声静音，强制让 iOS 批准后续的音频权限
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        gain.gain.value = 0; // 完全静音
+        gain.gain.value = 0;
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(0); osc.stop(audioCtx.currentTime + 0.01);
     } catch(e) {}
@@ -734,9 +770,6 @@ function toast(message, opts = {}) {
     setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, opts.duration || 2600);
 }
 
-// ============================================================
-// iPad 触控交互修复 (菜单显示/隐藏)
-// ============================================================
 function pokeToolbar() {
     toolbarPinned = true;
     playScreen.classList.add('toolbar-pinned');
@@ -749,7 +782,7 @@ function pokeToolbar() {
     }
 }
 interactionLayer.addEventListener('click', () => {
-    if (justSwiped || justDragged) { justSwiped = false; justDragged = false; return; } // 滑动切图/拖动平移后不要再误触发工具栏
+    if (justSwiped || justDragged) { justSwiped = false; justDragged = false; return; }
     toolbarPinned = !toolbarPinned;
     playScreen.classList.toggle('toolbar-pinned', toolbarPinned);
     clearTimeout(pinTimeout);
@@ -761,9 +794,6 @@ interactionLayer.addEventListener('click', () => {
     }
 });
 
-// ============================================================
-// 图片缩放引擎 (触屏双指捏合 / 桌面鼠标滚轮，均支持拖动平移)
-// ============================================================
 let imgScale = 1, imgPanX = 0, imgPanY = 0, imgOriginX = 50, imgOriginY = 50;
 const ZOOM_MIN = 1, ZOOM_MAX = 4;
 
@@ -774,8 +804,6 @@ function applyImgTransform() {
     canvasImg.classList.toggle('is-zoomed', imgScale > 1.001);
 }
 function setZoomOrigin(clientX, clientY) {
-    // 图片元素本身始终铺满整个屏幕 (position:absolute; inset:0)，直接用窗口尺寸换算百分比，
-    // 不受当前缩放比例影响，比 getBoundingClientRect() 更稳妥。
     imgOriginX = (clientX / window.innerWidth) * 100;
     imgOriginY = (clientY / window.innerHeight) * 100;
 }
@@ -785,9 +813,6 @@ function resetZoomState() {
     applyImgTransform();
 }
 
-// ============================================================
-// 触控手势：左右滑动切图 / 双指捏合缩放 / 双击恢复原始大小 / 放大后单指拖动平移
-// ============================================================
 let touchStartX = 0, touchStartY = 0, touchStartTime = 0, justSwiped = false, justDragged = false;
 let lastTapTime = 0;
 let pinchStartDist = 0, pinchStartScale = 1, isPinching = false;
@@ -798,7 +823,7 @@ const touchDist = (t0, t1) => Math.hypot(t1.clientX - t0.clientX, t1.clientY - t
 interactionLayer.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
         isPinching = true;
-        canvasImg.classList.add('is-dragging'); // 【修复 3.1】双指缩放时添加拖拽状态，去除过渡动画以解决重影
+        canvasImg.classList.add('is-dragging'); // 解决重影
         pinchStartDist = touchDist(e.touches[0], e.touches[1]);
         pinchStartScale = imgScale;
         const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
@@ -812,7 +837,7 @@ interactionLayer.addEventListener('touchstart', (e) => {
 
 interactionLayer.addEventListener('touchmove', (e) => {
     if (e.touches.length === 2) {
-        e.preventDefault(); // 阻止系统级整页缩放，交给我们自己处理图片缩放
+        e.preventDefault(); 
         const newDist = touchDist(e.touches[0], e.touches[1]);
         imgScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, pinchStartScale * (newDist / pinchStartDist)));
         applyImgTransform();
@@ -828,33 +853,32 @@ interactionLayer.addEventListener('touchend', (e) => {
     canvasImg.classList.remove('is-dragging');
     if (isPinching) {
         isPinching = false; justDragged = true;
-        if (imgScale <= 1.001) { imgPanX = 0; imgPanY = 0; } // 缩回原尺寸时清空平移，避免下次放大位置错乱
+        if (imgScale <= 1.001) { imgPanX = 0; imgPanY = 0; } 
         if (e.touches.length === 1) { panLastX = e.touches[0].clientX; panLastY = e.touches[0].clientY; }
         return;
     }
-    if (imgScale > 1) { justDragged = true; return; } // 放大状态下的单指操作是平移，不做滑动切图/双击判定
-
+    
     const touch = e.changedTouches[0]; if (!touch) return;
     const dx = touch.clientX - touchStartX, dy = touch.clientY - touchStartY;
     const dt = Date.now() - touchStartTime;
-    if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600) {
-        justSwiped = true;
-        if (dx < 0) nextImg(); else prevImg();
-        return;
-    }
-    // 双击检测：仅在已放大时用于恢复原始大小
+    
     const now = Date.now();
     if (now - lastTapTime < 320 && Math.abs(dx) < 12 && Math.abs(dy) < 12) {
         lastTapTime = 0;
-        resetZoomState(); // 【修复 3.2】调用恢复原始尺寸的函数
+        resetZoomState(); // 解决双击无法恢复
+        return;
     } else {
         lastTapTime = now;
     }
+
+    if (imgScale > 1) { justDragged = true; return; }
+
+    if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600) {
+        justSwiped = true;
+        if (dx < 0) nextImg(); else prevImg();
+    }
 }, { passive: true });
 
-// ============================================================
-// 桌面端：鼠标滚轮缩放 / 拖动平移 / 双击恢复原始大小
-// ============================================================
 interactionLayer.addEventListener('wheel', (e) => {
     e.preventDefault();
     setZoomOrigin(e.clientX, e.clientY);
@@ -884,7 +908,6 @@ window.addEventListener('mouseup', () => {
 });
 interactionLayer.addEventListener('dblclick', () => { resetZoomState(); });
 
-// 首次进入时给用户一个操作提示 (触屏 / 桌面各自的手势不同)
 let onboardShown = false;
 function maybeShowTouchOnboarding() {
     if (onboardShown) return;
@@ -894,32 +917,26 @@ function maybeShowTouchOnboarding() {
         : '滚轮缩放查看细节,拖动平移,双击恢复原大小';
     setTimeout(() => toast(msg, { duration: 3800 }), 500);
 }
-// ============================================================
-// 设备检测：iPad/iPhone 的 Safari 不支持文件夹选择 (webkitdirectory)，
-// ============================================================
+
 const isTouchDevice = (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
-// iPadOS 13+ 的 UA 伪装成 Mac，靠触屏点数区分
 const isIOSFamily = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 if (isTouchDevice) document.body.classList.add('touch-device');
 if (isIOSFamily) {
-    // 【修复 1】重建 input 元素，彻底移除文件夹属性，避免 iPad 只能单选
+    // 解决 iPad 只能单选图片的 Bug
     const newInput = document.createElement('input');
     newInput.type = 'file';
     newInput.id = 'file-input';
-    newInput.multiple = true; // 强制开启多选
+    newInput.multiple = true;
     newInput.accept = 'image/*';
     fileInput.parentNode.replaceChild(newInput, fileInput);
     fileInput = newInput; 
     
-    document.getElementById('folder-btn-label').textContent = '选择图片(可多选)';
+    document.getElementById('folder-btn-label').textContent = '选择图片 (可多选)';
     const hint = document.getElementById('platform-hint');
-    hint.textContent = 'iPad / iPhone 提示：在弹出的"文件"或"照片"里，可长按或滑动框选多张图片一次性导入';
+    hint.innerHTML = 'iPad / iPhone 提示：在弹出的"相册"中，<br>可长按滑动或框选多张图片一次性导入';
     hint.classList.remove('hidden-ui');
 }
 
-// ============================================================
-// 桌面端拖拽文件夹/图片到设置界面
-// ============================================================
 const folderBtn = document.getElementById('folder-btn');
 async function collectFilesFromDataTransfer(dataTransfer) {
     const out = [];
@@ -950,40 +967,44 @@ folderBtn.addEventListener('drop', async (e) => {
     handleIncomingFiles(files);
 });
 
-// ============================================================
-// 设置界面逻辑
-// ============================================================
 function handleIncomingFiles(fileList) {
-    const files = Array.from(fileList);
-    const IMG_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/i;
-    const filtered = files.filter(file => file.type.startsWith('image/') || IMG_EXT_RE.test(file.name));
-    const inPlayScreen = !playScreen.classList.contains('hidden-ui');
+    folderStatus.innerHTML = `<i class="icon-inline" style="color:var(--accent); animation:spin 1s linear infinite">${svgIcon('spinner')}</i> 正在处理图片, 请稍候...`;
+    
+    setTimeout(() => {
+        const files = Array.from(fileList);
+        const IMG_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/i;
+        const filtered = files.filter(file => file.type.startsWith('image/') || IMG_EXT_RE.test(file.name));
+        const inPlayScreen = !playScreen.classList.contains('hidden-ui');
 
-    // 【优化 3】自然排序：按文件名中的数字大小正确排序，防止图片错乱
-    filtered.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+        // 解决自然排序问题
+        filtered.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
 
-    if (filtered.length === 0) {
-        if (inPlayScreen) toast('未能在该文件夹中找到图片', { icon: 'triangle-exclamation' });
-        else { folderStatus.innerHTML = `<span style="color:var(--danger)"><i class="icon-inline">${svgIcon('triangle-exclamation')}</i> 未能在该文件夹中找到图片</span>`; startBtn.disabled = true; }
-        return;
-    }
+        if (filtered.length === 0) {
+            if (inPlayScreen) toast('未能在该文件夹中找到图片', { icon: 'triangle-exclamation' });
+            else { folderStatus.innerHTML = `<span style="color:var(--danger)"><i class="icon-inline">${svgIcon('triangle-exclamation')}</i> 未发现有效图片格式</span>`; startBtn.disabled = true; }
+            return;
+        }
 
-    images = filtered; playedHistory = [];
-    if (!inPlayScreen) {
-        folderStatus.innerHTML = `<span style="color:var(--rest)"><i class="icon-inline">${svgIcon('check')}</i> 已成功加载 ${images.length} 张图片</span>`;
-        startBtn.disabled = false; return;
-    }
+        images = filtered; playedHistory = [];
+        if (!inPlayScreen) {
+            folderStatus.innerHTML = `<span style="color:#5FB77B"><i class="icon-inline">${svgIcon('check')}</i> 已成功载入 ${images.length} 张参考图</span>`;
+            startBtn.disabled = false; return;
+        }
 
-    currentIndex = 0; toast(`已加载 ${images.length} 张图片,已重置播放队列`);
-    if (isShuffle) initShuffleBag();
-    if (currentMode === 'custom') startStructuredSession(); else loadCurrentImage();
+        currentIndex = 0; toast(`已加载 ${images.length} 张图片, 已重置播放队列`);
+        if (isShuffle) initShuffleBag();
+        if (currentMode === 'custom') startStructuredSession(); else loadCurrentImage();
+    }, 100);
 }
-fileInput.addEventListener('change', (e) => handleIncomingFiles(e.target.files));
+
+fileInput.addEventListener('change', (e) => {
+    if(e.target.files.length > 0) handleIncomingFiles(e.target.files);
+});
 
 function renderPracticeTimeButtons() {
     return `
-        <div style="width:100%; text-align:center;">
-            <p style="color:var(--text-muted); font-size:12px; margin-bottom:12px;">所有图片使用固定的展示时间。</p>
+        <div style="width:100%;">
+            <p style="color:#71697F; font-size:13px; margin-bottom:12px; font-weight:600;">每张图片展示时间</p>
             <div class="time-btn-container" id="time-btns">
                 <div class="time-btn ${practiceTime==30?'active':''}" data-time="30">30秒</div>
                 <div class="time-btn ${practiceTime==45?'active':''}" data-time="45">45秒</div>
@@ -998,9 +1019,9 @@ function renderPracticeTimeButtons() {
 function renderTabContent() {
     let html = '';
     if (currentMode === 'practice') html = renderPracticeTimeButtons();
-    else if (currentMode === 'class') html = `<div style="text-align:center;"><p style="color:var(--text-muted); font-size:12px; line-height:1.6; margin:0;">热身模式<br>强制锁定为每张图片 ${CLASS_FIXED_SECONDS} 秒,快速进入状态。</p></div>`;
-    else if (currentMode === 'relaxed') html = `<div style="text-align:center;"><p style="color:var(--text-muted); font-size:12px; margin:0;">无倒计时。<br>由你决定何时切换下一张图片。</p></div>`;
-    else if (currentMode === 'custom') html = `<div style="text-align:center;"><p style="color:var(--text-muted); font-size:12px; margin-bottom:12px; margin-top:0;">自由设定规则,编排你的专属训练计划。</p><button onclick="openCustomModal()" class="btn-primary footer-btn" style="border-radius:8px">编辑训练计划</button></div>`;
+    else if (currentMode === 'class') html = `<div style="width:100%;"><p style="color:#71697F; font-size:13px; line-height:1.6; margin:0; font-weight:500;">热身模式<br>强制锁定为每张图 ${CLASS_FIXED_SECONDS} 秒，快速进入状态。</p></div>`;
+    else if (currentMode === 'relaxed') html = `<div style="width:100%;"><p style="color:#71697F; font-size:13px; margin:0; font-weight:500;">无倒计时压力。<br>由你决定何时切换下一张图片。</p></div>`;
+    else if (currentMode === 'custom') html = `<div style="width:100%; display:flex; align-items:center; justify-content:space-between;"><p style="color:#71697F; font-size:13px; margin:0; font-weight:500;">自由设定规则，<br>编排你的专属训练计划。</p><button onclick="openCustomModal()" class="btn-primary" style="padding:10px 20px; border-radius:14px; font-size:14px;"><i data-icon="pen-to-square"></i> 编辑计划</button></div>`;
     tabContent.innerHTML = html;
 
     if (currentMode === 'practice') {
@@ -1012,6 +1033,7 @@ function renderTabContent() {
             });
         });
     }
+    initStaticIcons();
 }
 renderTabContent();
 
@@ -1034,32 +1056,26 @@ startBtn.addEventListener('click', () => {
     if (images.length === 0) return;
     if (currentMode === 'custom' && buildQueue(customRows).length === 0) { toast('请先编辑训练计划', { icon: 'triangle-exclamation' }); return; }
     
-    // 强制解锁音频权限，避免静音
-    unlockAudioContext();
+    unlockAudioContext(); // 解锁 iOS 声音限制
     
     setupScreen.classList.add('hidden-ui');
     playScreen.classList.remove('hidden-ui');
     playScreen.classList.add('screen-fade');
-    
-    // 【这几行代码是网页启动倒计时和加载图片的核心，绝对不能删！】
     currentIndex = 0; isPaused = false; playedHistory = [];
+    
     if (isShuffle) initShuffleBag();
     btnPause.innerHTML = `<i class="icon-inline">${svgIcon('pause')}</i>`;
-    pokeToolbar(); // 开始时提示一下工具栏位置
+    pokeToolbar();
     maybeShowTouchOnboarding();
     
     if (currentMode === 'custom') startStructuredSession(); else loadCurrentImage();
 });
 
-// ============================================================
-// 抽卡袋随机算法 (完全无重复直到抽空)
-// ============================================================
 function initShuffleBag() {
     unplayedIndices = [];
     for (let i = 0; i < images.length; i++) {
         if (i !== currentIndex) unplayedIndices.push(i);
     }
-    // Fisher-Yates 洗牌
     for (let i = unplayedIndices.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [unplayedIndices[i], unplayedIndices[j]] = [unplayedIndices[j], unplayedIndices[i]];
@@ -1087,7 +1103,6 @@ function pickPrevIndex() {
         let prev = playedHistory.pop();
         if (isShuffle) {
             unplayedIndices.push(currentIndex);
-            // 随便混洗一下袋子防止它必定最后出
             for (let i = unplayedIndices.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [unplayedIndices[i], unplayedIndices[j]] = [unplayedIndices[j], unplayedIndices[i]];
@@ -1098,9 +1113,6 @@ function pickPrevIndex() {
     return (currentIndex - 1 + images.length) % images.length;
 }
 
-// ============================================================
-// 自定义训练计划 & 弹窗逻辑
-// ============================================================
 let customRowsBackup = null;
 function openCustomModal() {
     if (customRows.length === 0) customRows = [{ count: 1, seconds: 30, isRest: false }];
@@ -1118,8 +1130,8 @@ function closeCustomModal(commit) {
 }
 function rowSummary(row) {
     const t = formatDurationShort(row.seconds);
-    return row.isRest ? `<i class="icon-inline mr-1.5" style="margin-right:6px">${svgIcon('mug-hot')}</i>休息 ${t}`
-                      : `<i class="icon-inline mr-1.5" style="margin-right:6px">${svgIcon('paintbrush')}</i>${row.count} 张图,每张 ${t}`;
+    return row.isRest ? `<i class="icon-inline mr-1.5" style="margin-right:8px">${svgIcon('mug-hot')}</i>休息 ${t}`
+                      : `<i class="icon-inline mr-1.5" style="margin-right:8px">${svgIcon('paintbrush')}</i>${row.count} 张图, 每张 ${t}`;
 }
 function renderRowList() {
     const list = document.getElementById('row-list');
@@ -1159,7 +1171,7 @@ function onRowFieldChange() {
 }
 function updateRowSubtotalDisplay() {
     const row = customRows[selectedRowIndex]; if (!row) return;
-    document.getElementById('row-subtotal-display').textContent = `本行小计:${formatDurationShort(row.count * row.seconds)}`;
+    document.getElementById('row-subtotal-display').textContent = `本行小计: ${formatDurationShort(row.count * row.seconds)}`;
 }
 function addRow(isRest) { customRows.push({ count: 1, seconds: isRest ? 60 : 30, isRest: !!isRest }); selectedRowIndex = customRows.length - 1; justAddedIndex = selectedRowIndex; renderRowList(); renderRowFields(); }
 function removeRow() { if (customRows.length <= 1) return; customRows.splice(selectedRowIndex, 1); selectedRowIndex = Math.max(0, selectedRowIndex - 1); renderRowList(); renderRowFields(); }
@@ -1167,7 +1179,6 @@ function moveRow(dir) { const newIndex = selectedRowIndex + dir; if (newIndex < 
 function formatDurationShort(t) { const h = Math.floor(t / 3600); const m = Math.floor((t % 3600) / 60); const s = t % 60; let o = ''; if (h > 0) o += `${h}时`; if (m > 0) o += `${m}分`; if (s > 0 || o === '') o += `${s}秒`; return o; }
 function updateTotalDurationDisplay() { document.getElementById('total-duration-display').textContent = formatDurationShort(customRows.reduce((sum, r) => sum + r.count * r.seconds, 0)); }
 
-// 预设保存加载
 const PRESET_KEY = 'flowreference_presets';
 function loadPresets() { try { return JSON.parse(localStorage.getItem(PRESET_KEY)) || {}; } catch (e) { return {}; } }
 function savePresets(obj) { localStorage.setItem(PRESET_KEY, JSON.stringify(obj)); }
@@ -1177,7 +1188,7 @@ document.addEventListener('click', (e) => { if (!e.target.closest('.popover') &&
 function showNamePopover(e, onConfirm) {
     closeAllPopovers();
     const pop = document.createElement('div'); pop.className = 'popover';
-    pop.innerHTML = `<input type="text" id="preset-name-input" placeholder="预设名称" maxlength="20" class="field-input popover-input"><div style="display:flex;justify-content:flex-end;gap:6px"><button class="btn-ghost popover-btn" id="preset-name-cancel">取消</button><button class="btn-primary popover-btn" id="preset-name-ok">保存</button></div>`;
+    pop.innerHTML = `<input type="text" id="preset-name-input" placeholder="预设名称" maxlength="20" class="field-input popover-input"><div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn-ghost popover-btn" style="padding:6px 12px;" id="preset-name-cancel">取消</button><button class="btn-primary popover-btn" style="padding:6px 12px; border-radius:8px" id="preset-name-ok">保存</button></div>`;
     positionPopover(pop, e); document.body.appendChild(pop);
     const input = pop.querySelector('#preset-name-input'); input.focus();
     const confirm = () => { const val = input.value.trim(); if (!val) { input.focus(); return; } onConfirm(val); pop.remove(); };
@@ -1216,9 +1227,6 @@ function openLoadPresetPopover(e) {
     });
 }
 
-// ============================================================
-// 课程队列引擎
-// ============================================================
 function buildQueue(rows) {
     const q = [];
     rows.forEach(r => { if (r.isRest) q.push({ type: 'rest', seconds: r.seconds }); else { for (let i = 0; i < r.count; i++) q.push({ type: 'image', seconds: r.seconds }); } });
@@ -1238,10 +1246,10 @@ function advanceQueue() {
 }
 function finishStructuredSession() {
     showRestOverlay(false); stepCounter.classList.add('hidden-ui'); progressTrack.style.width = '0%';
-    exitToMenu(); toast('训练完成,辛苦了!', { icon: 'champagne-glasses' });
+    exitToMenu(); toast('训练完成，辛苦了！', { icon: 'champagne-glasses' });
 }
 function updateStructuredProgressUI() {
-    stepCounter.textContent = `第 ${queueIndex + 1} / ${sessionQueue.length} 步`;
+    stepCounter.textContent = `${queueIndex + 1} / ${sessionQueue.length}`;
     const total = sessionQueue.reduce((s, st) => s + st.seconds, 0); const elapsed = sessionQueue.slice(0, queueIndex).reduce((s, st) => s + st.seconds, 0);
     progressTrack.style.width = `${total > 0 ? (elapsed / total) * 100 : 0}%`;
 }
@@ -1249,17 +1257,38 @@ function showRestOverlay(on) {
     restOverlay.classList.toggle('hidden-ui', !on); canvasImg.classList.toggle('is-resting', on); timerBadge.classList.toggle('is-rest', on);
 }
 
-// ============================================================
-// 播放器与倒计时
-// ============================================================
 function beginCountdown(totalSeconds, onComplete) {
-    clearInterval(timerInterval); timeRemaining = totalSeconds; updateCountdownDisplay(totalSeconds);
-    if (showTimer) { timerBadge.classList.remove('hidden-ui'); } else { timerBadge.classList.add('hidden-ui'); }
+    clearInterval(timerInterval); 
+    timeRemaining = totalSeconds; 
+    currentTotalTime = totalSeconds; 
+    updateCountdownDisplay(currentTotalTime);
+    
+    if (showTimer) { 
+        timerBadge.classList.remove('hidden-ui'); 
+        document.getElementById('btn-add-time').classList.remove('hidden-ui');
+    } else { 
+        timerBadge.classList.add('hidden-ui'); 
+        document.getElementById('btn-add-time').classList.add('hidden-ui');
+    }
+    
     timerInterval = setInterval(() => {
         if (isPaused) return;
-        timeRemaining--; updateCountdownDisplay(totalSeconds);
-        if (timeRemaining <= 0) { clearInterval(timerInterval); playBeepSound(true); onComplete && onComplete(); }
+        timeRemaining--; updateCountdownDisplay(currentTotalTime);
+        if (timeRemaining <= 0) { 
+            clearInterval(timerInterval); 
+            document.getElementById('btn-add-time').classList.add('hidden-ui');
+            playBeepSound(true); 
+            onComplete && onComplete(); 
+        }
     }, 1000);
+}
+
+function addTime(secs) {
+    if (currentMode === 'relaxed' || timeRemaining <= 0) return;
+    timeRemaining += secs;
+    currentTotalTime += secs; // 同步增加总时长让圆环进度比例顺滑
+    updateCountdownDisplay(currentTotalTime);
+    toast(`已加时 ${secs} 秒`, { icon: 'stopwatch' });
 }
 
 function updateCountdownDisplay(total) {
@@ -1271,6 +1300,7 @@ function updateCountdownDisplay(total) {
     if (clamped >= 60) {
         const m = Math.floor(clamped / 60).toString().padStart(2, '0'); const s = (clamped % 60).toString().padStart(2, '0'); timerDisplay.textContent = `${m}:${s}`;
     } else { timerDisplay.textContent = clamped; }
+    
     const frac = total > 0 ? clamped / total : 0;
     timerRingFg.setAttribute('stroke-dashoffset', (RING_CIRCUMFERENCE * (1 - frac)).toFixed(1));
 }
@@ -1278,10 +1308,13 @@ function updateCountdownDisplay(total) {
 function loadCurrentImage(afterLoad, skipAttempts) {
     if (images.length === 0) { exitToMenu(); return; }
     skipAttempts = skipAttempts || 0;
-    const file = images[currentIndex]; const objectURL = URL.createObjectURL(file);
+    
+    const file = images[currentIndex]; 
+    const objectURL = URL.createObjectURL(file);
     const img = new Image();
+    
     img.onload = function () {
-        // 【优化 1】清理内存，防止 iPad 崩溃闪退
+        // 彻底释放内存防崩溃
         if (currentObjectURL) URL.revokeObjectURL(currentObjectURL); 
         currentObjectURL = objectURL; 
 
@@ -1290,15 +1323,15 @@ function loadCurrentImage(afterLoad, skipAttempts) {
         document.getElementById('info-name').innerText = file.name;
         document.getElementById('info-details').innerText = `${this.width}x${this.height} px / ${(file.size / 1024).toFixed(0)} KB`;
         updateVisuals();
-        if (currentMode !== 'custom') { stepCounter.classList.remove('hidden-ui'); stepCounter.textContent = `第 ${currentIndex + 1} / ${images.length} 张`; }
+        if (currentMode !== 'custom') { stepCounter.classList.remove('hidden-ui'); stepCounter.textContent = `${currentIndex + 1} / ${images.length}`; }
         if (afterLoad) afterLoad(); else startTimerLogic();
     };
     img.onerror = function () {
         URL.revokeObjectURL(objectURL);
-        toast(`「${file.name}」格式无法显示,已跳过`, { icon: 'triangle-exclamation' });
+        toast(`「${file.name}」格式无法显示, 已跳过`, { icon: 'triangle-exclamation' });
         images.splice(currentIndex, 1);
-        if (images.length === 0) { toast('所有图片都无法加载,请检查图片格式', { icon: 'triangle-exclamation' }); exitToMenu(); return; }
-        if (skipAttempts >= images.length) { toast('图片均无法加载,请检查文件格式', { icon: 'triangle-exclamation' }); exitToMenu(); return; }
+        if (images.length === 0) { toast('所有图片都无法加载, 请检查图片格式', { icon: 'triangle-exclamation' }); exitToMenu(); return; }
+        if (skipAttempts >= images.length) { toast('图片均无法加载, 请检查文件格式', { icon: 'triangle-exclamation' }); exitToMenu(); return; }
         if (currentIndex >= images.length) currentIndex = 0;
         loadCurrentImage(afterLoad, skipAttempts + 1);
     };
@@ -1309,6 +1342,8 @@ function startTimerLogic() {
     clearInterval(timerInterval); timerBadge.classList.remove('is-danger');
     if (currentMode === 'relaxed') {
         timeRemaining = 0; timerDisplay.textContent = '00:00'; timerRingFg.setAttribute('stroke-dashoffset', '0');
+        document.getElementById('btn-add-time').classList.add('hidden-ui'); // 休闲模式隐藏加时
+        
         if (showTimer) timerBadge.classList.remove('hidden-ui'); else timerBadge.classList.add('hidden-ui');
         timerInterval = setInterval(() => {
             if (isPaused) return; timeRemaining++;
@@ -1320,7 +1355,6 @@ function startTimerLogic() {
     }
 }
 
-// 控制动作
 function nextImg() {
     if (images.length === 0) return; pokeToolbar();
     if (currentMode === 'custom') advanceQueue(); else { currentIndex = pickNextIndex(); loadCurrentImage(); }
@@ -1348,12 +1382,12 @@ function deleteImg() {
 function exitToMenu() {
     resetZoomState();
     clearInterval(timerInterval); timerBadge.classList.remove('is-danger'); showRestOverlay(false);
+    document.getElementById('btn-add-time').classList.add('hidden-ui');
     stepCounter.classList.add('hidden-ui'); progressTrack.style.width = '0%';
     playScreen.classList.add('hidden-ui'); setupScreen.classList.remove('hidden-ui'); setupScreen.classList.add('screen-fade');
     if (images.length === 0) { folderStatus.innerHTML = ''; startBtn.disabled = true; }
 }
 
-// 视觉/功能工具
 function updateVisuals() {
     applyImgTransform();
     canvasImg.style.filter = isBW ? 'grayscale(100%) contrast(120%)' : 'none';
@@ -1362,17 +1396,17 @@ function toggleFlip() { isFlipped = !isFlipped; updateVisuals(); }
 function toggleBW() { isBW = !isBW; document.getElementById('btn-bw').classList.toggle('active', isBW); updateVisuals(); }
 function toggleInfo() { showInfo = !showInfo; topInfo.classList.toggle('hidden-ui', !showInfo); document.getElementById('btn-info').classList.toggle('active', showInfo); }
 function toggleGrid() { isGrid = !isGrid; document.getElementById('grid-overlay').classList.toggle('hidden-ui', !isGrid); document.getElementById('btn-grid').classList.toggle('active', isGrid); }
-function toggleTimerVis() { showTimer = !showTimer; timerBadge.classList.toggle('hidden-ui', !showTimer); document.getElementById('btn-timer').classList.toggle('active', showTimer); }
-function toggleSound() { 
-    soundEnabled = !soundEnabled; 
-    const btn = document.getElementById('btn-sound'); 
-    btn.classList.toggle('active', soundEnabled); 
-    btn.innerHTML = svgIcon(soundEnabled ? 'volume-high' : 'volume-xmark'); 
-    if(soundEnabled) unlockAudioContext(); 
+function toggleTimerVis() { 
+    showTimer = !showTimer; 
+    timerBadge.classList.toggle('hidden-ui', !showTimer); 
+    document.getElementById('btn-timer').classList.toggle('active', showTimer); 
+    if (currentMode !== 'relaxed' && timeRemaining > 0) {
+        document.getElementById('btn-add-time').classList.toggle('hidden-ui', !showTimer);
+    }
 }
+function toggleSound() { soundEnabled = !soundEnabled; const btn = document.getElementById('btn-sound'); btn.classList.toggle('active', soundEnabled); btn.innerHTML = svgIcon(soundEnabled ? 'volume-high' : 'volume-xmark'); }
 function toggleShuffle() { isShuffle = !isShuffle; playedHistory = []; if (isShuffle) initShuffleBag(); document.getElementById('btn-shuffle').classList.toggle('active', isShuffle); }
 
-// 键盘事件
 document.addEventListener('keydown', (e) => {
     if (playScreen.classList.contains('hidden-ui')) return;
     if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
