@@ -661,6 +661,7 @@ let isGrid = false;
 let isShuffle = false;
 let soundEnabled = true;
 let audioCtx = null;
+let currentObjectURL = null; // 【优化 1】新增：用于追踪当前图片的内存地址，防止内存溢出崩溃
 let playedHistory = [];
 let unplayedIndices = []; // 抽奖袋
 const RING_CIRCUMFERENCE = 2 * Math.PI * 34;
@@ -961,6 +962,10 @@ function handleIncomingFiles(fileList) {
     const files = Array.from(fileList);
     const IMG_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/i;
     const filtered = files.filter(file => file.type.startsWith('image/') || IMG_EXT_RE.test(file.name));
+    
+    // 【优化 3】新增：按文件名进行“自然排序”（确保 10.jpg 乖乖排在 2.jpg 后面）
+    filtered.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    
     const inPlayScreen = !playScreen.classList.contains('hidden-ui');
 
     if (filtered.length === 0) {
@@ -1033,6 +1038,14 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 startBtn.addEventListener('click', () => {
     if (images.length === 0) return;
     if (currentMode === 'custom' && buildQueue(customRows).length === 0) { toast('请先编辑训练计划', { icon: 'triangle-exclamation' }); return; }
+    
+    // 【优化 2】新增：利用用户点击按钮的瞬间，激活苹果设备的音频权限，防止倒计时声音被拦截
+    if (soundEnabled) {
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        } catch (e) {}
+    }
     
     setupScreen.classList.add('hidden-ui');
     playScreen.classList.remove('hidden-ui');
@@ -1259,11 +1272,20 @@ function updateCountdownDisplay(total) {
 function loadCurrentImage(afterLoad, skipAttempts) {
     if (images.length === 0) { exitToMenu(); return; }
     skipAttempts = skipAttempts || 0;
-    const file = images[currentIndex]; const objectURL = URL.createObjectURL(file);
+    
+    // 【优化 1】核心修复：切换图片前，务必销毁上一张图的内存，拯救 iPad 运存
+    if (currentObjectURL) {
+        URL.revokeObjectURL(currentObjectURL);
+        currentObjectURL = null;
+    }
+    
+    const file = images[currentIndex]; 
+    currentObjectURL = URL.createObjectURL(file); // 赋值给全局变量
+    
     const img = new Image();
     img.onload = function () {
         resetZoomState();
-        canvasImg.src = objectURL;
+        canvasImg.src = currentObjectURL;
         document.getElementById('info-name').innerText = file.name;
         document.getElementById('info-details').innerText = `${this.width}x${this.height} px / ${(file.size / 1024).toFixed(0)} KB`;
         updateVisuals();
@@ -1271,7 +1293,11 @@ function loadCurrentImage(afterLoad, skipAttempts) {
         if (afterLoad) afterLoad(); else startTimerLogic();
     };
     img.onerror = function () {
-        URL.revokeObjectURL(objectURL);
+        // 【优化 1】加载失败时同样清理内存
+        if (currentObjectURL) {
+            URL.revokeObjectURL(currentObjectURL);
+            currentObjectURL = null;
+        }
         toast(`「${file.name}」格式无法显示,已跳过`, { icon: 'triangle-exclamation' });
         images.splice(currentIndex, 1);
         if (images.length === 0) { toast('所有图片都无法加载,请检查图片格式', { icon: 'triangle-exclamation' }); exitToMenu(); return; }
@@ -1279,7 +1305,7 @@ function loadCurrentImage(afterLoad, skipAttempts) {
         if (currentIndex >= images.length) currentIndex = 0;
         loadCurrentImage(afterLoad, skipAttempts + 1);
     };
-    img.src = objectURL;
+    img.src = currentObjectURL;
 }
 
 function startTimerLogic() {
@@ -1326,18 +1352,18 @@ function exitToMenu() {
     clearInterval(timerInterval); timerBadge.classList.remove('is-danger'); showRestOverlay(false);
     stepCounter.classList.add('hidden-ui'); progressTrack.style.width = '0%';
     playScreen.classList.add('hidden-ui'); setupScreen.classList.remove('hidden-ui'); setupScreen.classList.add('screen-fade');
+    
+    // 【优化 1】退出到主菜单时，彻底清空画面和内存
+    if (currentObjectURL) {
+        URL.revokeObjectURL(currentObjectURL);
+        currentObjectURL = null;
+    }
+    canvasImg.src = '';
+    
     if (images.length === 0) { folderStatus.innerHTML = ''; startBtn.disabled = true; }
 }
 
-function updateVisuals() {
-    applyImgTransform();
-    canvasImg.style.filter = isBW ? 'grayscale(100%) contrast(120%)' : 'none';
-}
-function toggleFlip() { isFlipped = !isFlipped; updateVisuals(); }
-function toggleBW() { isBW = !isBW; document.getElementById('btn-bw').classList.toggle('active', isBW); updateVisuals(); }
-function toggleInfo() { showInfo = !showInfo; topInfo.classList.toggle('hidden-ui', !showInfo); document.getElementById('btn-info').classList.toggle('active', showInfo); }
-function toggleGrid() { isGrid = !isGrid; document.getElementById('grid-overlay').classList.toggle('hidden-ui', !isGrid); document.getElementById('btn-grid').classList.toggle('active', isGrid); }
-function toggleTimerVis() { showTimer = !showTimer; timerBadge.classList.toggle('hidden-ui', !showTimer); document.getElementById('btn-timer').classList.toggle('active', showTimer); }
+// 视觉/功能工具
 function toggleSound() { soundEnabled = !soundEnabled; const btn = document.getElementById('btn-sound'); btn.classList.toggle('active', soundEnabled); btn.innerHTML = svgIcon(soundEnabled ? 'volume-high' : 'volume-xmark'); }
 function toggleShuffle() { isShuffle = !isShuffle; playedHistory = []; if (isShuffle) initShuffleBag(); document.getElementById('btn-shuffle').classList.toggle('active', isShuffle); }
 
